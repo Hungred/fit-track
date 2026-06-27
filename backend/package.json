@@ -1,0 +1,19 @@
+{
+  "name": "fit-track-backend",
+  "version": "1.0.0",
+  "description": "Fit Track LINE 健身房簽到系統後端",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "@line/bot-sdk": "^9.4.0",
+    "@supabase/supabase-js": "^2.49.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "qrcode": "^1.5.4"
+  }
+}
