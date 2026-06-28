@@ -3,9 +3,13 @@ import { ref } from 'vue'
 import { authApi, setCoachHeader } from '../api/index.js'
 
 export const useAuthStore = defineStore('auth', () => {
-  const isAuth = ref(!!localStorage.getItem('coach_uid'))
+  const storedUid = localStorage.getItem('coach_uid') || ''
+  const isAuth = ref(!!storedUid)
   const coachName = ref(localStorage.getItem('coach_name') || '')
-  const lineUid = ref(localStorage.getItem('coach_uid') || '')
+  const lineUid = ref(storedUid)
+
+  // 有 UID 就立刻設好 header，不用等 restore()
+  if (storedUid) setCoachHeader(storedUid)
 
   async function login(password) {
     const res = await authApi.login(password)
