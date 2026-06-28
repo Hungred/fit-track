@@ -117,7 +117,7 @@ onMounted(() => {
 
       <!-- 簽到按鈕 -->
       <button
-        @click="handleCheckin"
+        @click="() => handleCheckin()"
         :disabled="checkingIn || !store.packages.length"
         class="w-full bg-green-500 hover:bg-green-600 active:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg py-5 rounded-2xl shadow-md transition-all duration-150 active:scale-95"
       >
