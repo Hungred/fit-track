@@ -22,6 +22,7 @@ const operatorPaths = ['/operator', '/operator/login']
 router.beforeEach((to) => {
   if (operatorPaths.some(p => to.path.startsWith(p))) return
   const auth = useAuthStore()
+  if (to.query.gym) auth.setGym(to.query.gym)
   if (!auth.isAuth && to.path !== '/login') return '/login'
   if (auth.isAuth && to.path === '/login') return '/'
 })
