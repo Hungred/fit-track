@@ -20,8 +20,18 @@ async function bootstrap() {
   app.mount('#app')
 
   await initLiff()
+
+  // LIFF init 完成後 URL params 才正確還原
   const store = useUserStore()
-  await store.init()
+  const params = new URLSearchParams(window.location.search)
+  const gymId = params.get('gym') || localStorage.getItem('gym_id')
+  if (gymId) {
+    store.setGym(gymId)
+    await store.init()
+  } else {
+    store.loading = false
+    store.initError = '缺少健身房資訊，請透過 LINE 選單開啟'
+  }
 }
 
 bootstrap()
