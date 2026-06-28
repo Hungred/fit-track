@@ -7,7 +7,7 @@ export const useUserStore = defineStore('user', () => {
   const member = ref(null)
   const packages = ref([])
   const lineProfile = ref(null)
-  const loading = ref(false)
+  const loading = ref(true)
   const initError = ref(null)
 
   async function init() {
