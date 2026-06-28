@@ -40,6 +40,11 @@ export const coachApi = {
   assignPackage: (data) => api.post('/api/coach/packages/assign', data),
   adjustSessions: (id, data) => api.patch(`/api/coach/member-packages/${id}/adjust`, data),
 
+  updateMemberPackage: (id, data) => api.patch(`/api/coach/member-packages/${id}`, data),
+  deleteMemberPackage: (id) => api.delete(`/api/coach/member-packages/${id}`),
+  updateCheckin: (id, data) => api.patch(`/api/coach/checkins/${id}`, data),
+  deleteCheckin: (id) => api.delete(`/api/coach/checkins/${id}`),
+
   generateQrToken: () => api.post('/api/coach/qr-token'),
   getReport: (month) => api.get('/api/coach/report', { params: { month } }),
   getTodayLeaves: () => api.get('/api/coach/leaves'),

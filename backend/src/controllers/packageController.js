@@ -84,6 +84,34 @@ export async function assignPackage(req, res) {
   res.json({ member_package: data })
 }
 
+export async function updateMemberPackage(req, res) {
+  const { id } = req.params
+  const { remaining_sessions, expires_at, package_id } = req.body
+
+  const updates = {}
+  if (remaining_sessions !== undefined) updates.remaining_sessions = Number(remaining_sessions)
+  if (expires_at !== undefined) updates.expires_at = expires_at || null
+  if (package_id !== undefined) updates.package_id = package_id
+
+  const { data, error } = await supabase
+    .from('member_packages')
+    .update(updates)
+    .eq('id', id)
+    .eq('gym_id', req.gym.id)
+    .select()
+    .single()
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.json({ member_package: data })
+}
+
+export async function deleteMemberPackage(req, res) {
+  const { id } = req.params
+  const { error } = await supabase.from('member_packages').delete().eq('id', id).eq('gym_id', req.gym.id)
+  if (error) return res.status(500).json({ error: error.message })
+  res.json({ ok: true })
+}
+
 export async function adjustSessions(req, res) {
   const { id } = req.params
   const { delta, notes } = req.body

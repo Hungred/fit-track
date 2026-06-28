@@ -126,9 +126,11 @@ onMounted(fetchDashboard)
               <span v-else class="text-gray-300">—</span>
             </td>
             <td class="px-5 py-3.5">
-              <span v-if="m.active_packages?.length" class="text-gray-600">
-                {{ m.active_packages.length }} 個方案
-              </span>
+              <div v-if="m.active_packages?.length" class="space-y-0.5">
+                <p v-for="p in m.active_packages" :key="p.id" class="text-xs text-gray-600">
+                  {{ p.package?.name }}
+                </p>
+              </div>
               <span v-else class="text-red-400 text-xs">無有效方案</span>
             </td>
             <td class="px-5 py-3.5">

@@ -138,3 +138,40 @@ export async function manualCheckin(req, res) {
 
   res.json({ message: '補登成功', checkin })
 }
+
+export async function updateCheckin(req, res) {
+  const { id } = req.params
+  const { checked_in_at, method, notes } = req.body
+
+  const updates = {}
+  if (checked_in_at !== undefined) updates.checked_in_at = checked_in_at
+  if (method !== undefined) updates.method = method
+  if (notes !== undefined) updates.notes = notes
+
+  const { data, error } = await supabase
+    .from('checkins')
+    .update(updates)
+    .eq('id', id)
+    .eq('gym_id', req.gym.id)
+    .select()
+    .single()
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.json({ checkin: data })
+}
+
+export async function deleteCheckin(req, res) {
+  const { id } = req.params
+
+  const { data: c } = await supabase.from('checkins').select('member_package_id').eq('id', id).eq('gym_id', req.gym.id).single()
+  if (!c) return res.status(404).json({ error: '簽到記錄不存在' })
+
+  await supabase.from('checkins').delete().eq('id', id)
+
+  if (c.member_package_id) {
+    const { data: mp } = await supabase.from('member_packages').select('remaining_sessions').eq('id', c.member_package_id).single()
+    if (mp) await supabase.from('member_packages').update({ remaining_sessions: mp.remaining_sessions + 1 }).eq('id', c.member_package_id)
+  }
+
+  res.json({ ok: true })
+}
