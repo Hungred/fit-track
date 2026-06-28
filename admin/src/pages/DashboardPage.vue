@@ -13,6 +13,7 @@ const search = ref('')
 const showManualCheckin = ref(false)
 const manualForm = ref({ member_id: '', date: dayjs().format('YYYY-MM-DDTHH:mm'), notes: '' })
 const submitting = ref(false)
+const todayLeaveIds = ref(new Set())
 
 const filtered = computed(() => {
   const q = search.value.toLowerCase()
@@ -20,12 +21,17 @@ const filtered = computed(() => {
 })
 
 const todayCheckedIn = computed(() => members.value.filter(m => m.checked_in_today).length)
+const todayLeaveCount = computed(() => todayLeaveIds.value.size)
 
 async function fetchDashboard() {
   loading.value = true
   try {
-    const res = await coachApi.getDashboard()
-    members.value = res.data.members
+    const [dashRes, leaveRes] = await Promise.all([
+      coachApi.getDashboard(),
+      coachApi.getTodayLeaves(),
+    ])
+    members.value = dashRes.data.members
+    todayLeaveIds.value = new Set(leaveRes.data.leaves.map(l => l.member?.id))
   } catch {
     ElMessage.error('載入失敗')
   } finally {
@@ -82,8 +88,8 @@ onMounted(fetchDashboard)
         <p class="text-3xl font-bold text-green-600 mt-1">{{ todayCheckedIn }}</p>
       </div>
       <div class="bg-white rounded-xl p-4 shadow-sm">
-        <p class="text-sm text-gray-400">尚未簽到</p>
-        <p class="text-3xl font-bold text-gray-400 mt-1">{{ members.length - todayCheckedIn }}</p>
+        <p class="text-sm text-gray-400">今日請假</p>
+        <p class="text-3xl font-bold text-orange-400 mt-1">{{ todayLeaveCount }}</p>
       </div>
     </div>
 
@@ -115,6 +121,7 @@ onMounted(fetchDashboard)
             </td>
             <td class="px-5 py-3.5">
               <span v-if="m.checked_in_today" class="text-green-500 font-medium">✅ 已簽到</span>
+              <span v-else-if="todayLeaveIds.has(m.id)" class="text-orange-400 font-medium">🏖️ 請假</span>
               <span v-else class="text-gray-300">—</span>
             </td>
             <td class="px-5 py-3.5">
