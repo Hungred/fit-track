@@ -1,14 +1,20 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { ElMessage } from 'element-plus'
 
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 const password = ref('')
 const loading = ref(false)
 const showPassword = ref(false)
+
+onMounted(() => {
+  const gymId = route.query.gym || localStorage.getItem('gym_id')
+  if (gymId) auth.setGym(gymId)
+})
 
 async function handleLogin() {
   if (!password.value) {

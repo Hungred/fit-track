@@ -8,6 +8,8 @@ const routes = [
   { path: '/packages', component: () => import('../pages/PackagesPage.vue') },
   { path: '/qr', component: () => import('../pages/QRPage.vue') },
   { path: '/report', component: () => import('../pages/ReportPage.vue') },
+  { path: '/operator/login', component: () => import('../pages/OperatorLoginPage.vue') },
+  { path: '/operator', component: () => import('../pages/OperatorPage.vue') },
 ]
 
 const router = createRouter({
@@ -15,7 +17,10 @@ const router = createRouter({
   routes,
 })
 
+const operatorPaths = ['/operator', '/operator/login']
+
 router.beforeEach((to) => {
+  if (operatorPaths.some(p => to.path.startsWith(p))) return
   const auth = useAuthStore()
   if (!auth.isAuth && to.path !== '/login') return '/login'
   if (auth.isAuth && to.path === '/login') return '/'

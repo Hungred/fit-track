@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { memberApi, setAuthHeader } from '../api/index.js'
+import { memberApi, setAuthHeader, setGymHeader } from '../api/index.js'
 import { getLineProfile } from '../lib/liff.js'
 
 export const useUserStore = defineStore('user', () => {
@@ -9,6 +9,13 @@ export const useUserStore = defineStore('user', () => {
   const lineProfile = ref(null)
   const loading = ref(true)
   const initError = ref(null)
+  const gymId = ref(null)
+
+  function setGym(id) {
+    gymId.value = id
+    setGymHeader(id)
+    localStorage.setItem('gym_id', id)
+  }
 
   async function init() {
     loading.value = true
@@ -21,10 +28,8 @@ export const useUserStore = defineStore('user', () => {
       packages.value = res.data.packages
     } catch (err) {
       if (err.response?.status === 401) {
-        // 尚未綁定，導向綁定頁
         member.value = null
       } else {
-        // API 錯誤（冷啟動、網路問題），保留 loading 狀態讓 UI 顯示錯誤
         initError.value = '連線中，請稍後再試...'
       }
     } finally {
@@ -38,5 +43,5 @@ export const useUserStore = defineStore('user', () => {
     await init()
   }
 
-  return { member, packages, lineProfile, loading, initError, init, bindMember }
+  return { member, packages, lineProfile, loading, initError, gymId, init, bindMember, setGym }
 })

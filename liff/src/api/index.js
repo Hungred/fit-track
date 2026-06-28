@@ -4,10 +4,13 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 })
 
-// 每次 request 自動帶入 LINE UID
 export function setAuthHeader(lineUid, displayName) {
   api.defaults.headers.common['x-line-uid'] = lineUid
   api.defaults.headers.common['x-line-display-name'] = displayName
+}
+
+export function setGymHeader(gymId) {
+  api.defaults.headers.common['x-gym-id'] = gymId
 }
 
 export const memberApi = {

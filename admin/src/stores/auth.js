@@ -1,15 +1,24 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { authApi, setCoachHeader } from '../api/index.js'
+import { authApi, setCoachHeader, setGymHeader } from '../api/index.js'
 
 export const useAuthStore = defineStore('auth', () => {
   const storedUid = localStorage.getItem('coach_uid') || ''
+  const storedGymId = localStorage.getItem('gym_id') || ''
+
   const isAuth = ref(!!storedUid)
   const coachName = ref(localStorage.getItem('coach_name') || '')
   const lineUid = ref(storedUid)
+  const gymId = ref(storedGymId)
 
-  // 有 UID 就立刻設好 header，不用等 restore()
   if (storedUid) setCoachHeader(storedUid)
+  if (storedGymId) setGymHeader(storedGymId)
+
+  function setGym(id) {
+    gymId.value = id
+    setGymHeader(id)
+    localStorage.setItem('gym_id', id)
+  }
 
   async function login(password) {
     const res = await authApi.login(password)
@@ -22,12 +31,6 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('coach_name', coach.name)
   }
 
-  async function restore() {
-    if (!lineUid.value) return
-    setCoachHeader(lineUid.value)
-    isAuth.value = true
-  }
-
   function logout() {
     isAuth.value = false
     coachName.value = ''
@@ -36,5 +39,5 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('coach_name')
   }
 
-  return { isAuth, coachName, lineUid, login, restore, logout }
+  return { isAuth, coachName, lineUid, gymId, login, logout, setGym }
 })
