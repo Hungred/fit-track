@@ -7,7 +7,7 @@ export async function getDashboard(req, res) {
 
   const { data: members, error: memberError } = await supabase
     .from('members')
-    .select(`id, name, phone, display_name, member_packages(id, remaining_sessions, expires_at, package:packages(name))`)
+    .select(`id, name, phone, display_name, member_packages(id, package_id, remaining_sessions, expires_at, package:packages(id, name))`)
     .eq('role', 'member')
     .eq('gym_id', gymId)
     .order('name')
