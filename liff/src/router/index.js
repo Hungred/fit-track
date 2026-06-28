@@ -14,6 +14,10 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   const store = useUserStore()
+
+  // 初始化中或有錯誤時不做跳轉，由 App.vue 顯示對應畫面
+  if (store.loading || store.initError) return
+
   if (!store.member && to.path !== '/bind') {
     return '/bind'
   }

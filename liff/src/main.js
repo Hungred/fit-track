@@ -16,11 +16,12 @@ async function bootstrap() {
   app.use(ElementPlus, { locale: zhTw })
   app.use(router)
 
+  // 先掛載 App，讓 loading 畫面可以顯示
+  app.mount('#app')
+
   await initLiff()
   const store = useUserStore()
   await store.init()
-
-  app.mount('#app')
 }
 
 bootstrap()
