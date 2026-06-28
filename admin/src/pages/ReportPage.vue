@@ -4,11 +4,12 @@ import { coachApi } from '../api/index.js'
 import Layout from '../components/Layout.vue'
 import dayjs from 'dayjs'
 
+const today = dayjs().format('YYYY-MM-DD')
 const month = ref(dayjs().format('YYYY-MM'))
 const report = ref(null)
 const loading = ref(false)
 const errorMsg = ref('')
-const selectedDate = ref(null)
+const selectedDate = ref(today)
 
 async function fetchReport() {
   loading.value = true
@@ -62,7 +63,6 @@ function dateStr(day) {
 }
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
-const today = dayjs().format('YYYY-MM-DD')
 
 onMounted(fetchReport)
 </script>
