@@ -26,19 +26,20 @@ async function fetchReport() {
   }
 }
 
-// { 'YYYY-MM-DD': [{ id, name, time, checkinAt }, ...] } sorted by time
+// { 'YYYY-MM-DD': [{ id, name, time, ts }, ...] } sorted by local time
 const dailyMap = computed(() => {
   if (!report.value) return {}
   const map = {}
   for (const member of report.value.breakdown) {
     for (const checkinAt of member.dates) {
-      const date = checkinAt.slice(0, 10)
+      const local = dayjs(checkinAt)
+      const date = local.format('YYYY-MM-DD')
       if (!map[date]) map[date] = []
-      map[date].push({ id: member.id, name: member.name, time: dayjs(checkinAt).format('HH:mm'), checkinAt })
+      map[date].push({ id: member.id, name: member.name, time: local.format('HH:mm'), ts: local.valueOf() })
     }
   }
   for (const date in map) {
-    map[date].sort((a, b) => a.checkinAt.localeCompare(b.checkinAt))
+    map[date].sort((a, b) => a.ts - b.ts)
   }
   return map
 })
@@ -155,7 +156,7 @@ onMounted(fetchReport)
               當日無出勤記錄
             </div>
             <div v-else class="space-y-2">
-              <div v-for="(m, idx) in selectedDayMembers" :key="m.checkinAt"
+              <div v-for="(m, idx) in selectedDayMembers" :key="m.ts"
                 class="flex items-center gap-3 px-3 py-2.5 bg-gray-50 rounded-xl">
                 <span class="w-6 h-6 rounded-full bg-green-100 text-green-600 text-xs font-bold flex items-center justify-center shrink-0">
                   {{ idx + 1 }}
