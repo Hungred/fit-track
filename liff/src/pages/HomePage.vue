@@ -69,7 +69,9 @@ async function cancelLeave() {
 
 onMounted(() => {
   const token = route.query.token
+  const action = route.query.action
   if (token) handleCheckin('qr', token)
+  else if (action === 'checkin') handleCheckin()
   loadLeaveStatus()
 })
 </script>

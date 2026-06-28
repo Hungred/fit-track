@@ -1,5 +1,5 @@
 import supabase from '../lib/supabase.js'
-import { pushMessage, lowSessionMessage } from '../lib/line.js'
+import { pushMessage, checkinSuccessMessage, lowSessionMessage } from '../lib/line.js'
 
 export async function checkin(req, res) {
   const { method = 'button', qr_token } = req.body
@@ -68,25 +68,33 @@ export async function checkin(req, res) {
 
   if (deductError) return res.status(500).json({ error: deductError.message })
 
-  // 堂數剩 2 堂以下，推播提醒
-  if (remaining <= 2) {
-    const { data: memberData } = await supabase
-      .from('members')
-      .select('name, line_uid')
-      .eq('id', memberId)
-      .single()
+  const { data: memberData } = await supabase
+    .from('members')
+    .select('name, line_uid')
+    .eq('id', memberId)
+    .single()
 
-    const { data: pkgData } = await supabase
-      .from('packages')
-      .select('name')
-      .eq('id', targetPackage.package_id)
-      .single()
+  const { data: pkgData } = await supabase
+    .from('packages')
+    .select('name')
+    .eq('id', targetPackage.package_id)
+    .single()
 
-    if (memberData?.line_uid) {
+  if (memberData?.line_uid) {
+    const pkgName = pkgData?.name || '課程方案'
+
+    // 簽到成功推播
+    pushMessage(
+      memberData.line_uid,
+      checkinSuccessMessage(memberData.name, remaining, pkgName, checkin.checked_in_at)
+    ).catch(() => {})
+
+    // 堂數不足額外提醒
+    if (remaining <= 2) {
       pushMessage(
         memberData.line_uid,
-        lowSessionMessage(memberData.name, remaining, pkgData?.name || '課程方案')
-      ).catch(() => {}) // 推播失敗不影響簽到
+        lowSessionMessage(memberData.name, remaining, pkgName)
+      ).catch(() => {})
     }
   }
 

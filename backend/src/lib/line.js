@@ -17,6 +17,75 @@ export async function pushMessage(lineUid, messages) {
   )
 }
 
+export function checkinSuccessMessage(memberName, remaining, packageName, checkedInAt) {
+  const timeStr = new Date(checkedInAt).toLocaleString('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+  return [
+    {
+      type: 'flex',
+      altText: `✅ 簽到成功`,
+      contents: {
+        type: 'bubble',
+        header: {
+          type: 'box',
+          layout: 'vertical',
+          backgroundColor: '#16a34a',
+          contents: [
+            {
+              type: 'text',
+              text: '✅ 簽到成功',
+              color: '#ffffff',
+              weight: 'bold',
+              size: 'md',
+            },
+          ],
+        },
+        body: {
+          type: 'box',
+          layout: 'vertical',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'text',
+              text: `${memberName} 您好`,
+              weight: 'bold',
+              size: 'md',
+              color: '#1f2937',
+            },
+            {
+              type: 'text',
+              text: `簽到時間：${timeStr}`,
+              size: 'sm',
+              color: '#6b7280',
+              margin: 'sm',
+            },
+            {
+              type: 'text',
+              text: `方案：${packageName}`,
+              size: 'sm',
+              color: '#6b7280',
+              margin: 'xs',
+            },
+            {
+              type: 'text',
+              text: `剩餘堂數：${remaining} 堂`,
+              size: 'sm',
+              color: remaining <= 2 ? '#ef4444' : '#6b7280',
+              margin: 'xs',
+            },
+          ],
+        },
+      },
+    },
+  ]
+}
+
 export function lowSessionMessage(memberName, remaining, packageName) {
   return [
     {
