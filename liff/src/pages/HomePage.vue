@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '../stores/user.js'
 import { checkinApi, leaveApi } from '../api/index.js'
@@ -67,12 +67,23 @@ async function cancelLeave() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   const token = route.query.token
   const action = route.query.action
-  if (token) handleCheckin('qr', token)
-  else if (action === 'checkin') handleCheckin()
   loadLeaveStatus()
+
+  if (!token && action !== 'checkin') return
+
+  // bootstrap 可能還在跑 liff.init()，等 store 初始化完再打 API
+  if (store.loading) {
+    await new Promise(resolve => {
+      const stop = watch(() => store.loading, v => { if (!v) { stop(); resolve() } })
+    })
+  }
+
+  if (!store.member) return
+  if (token) handleCheckin('qr', token)
+  else handleCheckin()
 })
 </script>
 
