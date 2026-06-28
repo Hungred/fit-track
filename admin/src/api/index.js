@@ -16,6 +16,7 @@ export const coachApi = {
   getPackages: () => api.get('/api/coach/packages'),
   createPackage: (data) => api.post('/api/coach/packages', data),
   updatePackage: (id, data) => api.patch(`/api/coach/packages/${id}`, data),
+  deletePackage: (id) => api.delete(`/api/coach/packages/${id}`),
   assignPackage: (data) => api.post('/api/coach/packages/assign', data),
   adjustSessions: (id, data) => api.patch(`/api/coach/member-packages/${id}/adjust`, data),
 }

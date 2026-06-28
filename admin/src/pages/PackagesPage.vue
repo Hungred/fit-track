@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { coachApi } from '../api/index.js'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import Layout from '../components/Layout.vue'
 
 const packages = ref([])
@@ -87,6 +87,22 @@ async function updatePackage() {
   }
 }
 
+async function deletePackage(pkg) {
+  try {
+    await ElMessageBox.confirm(`確定要刪除「${pkg.name}」嗎？`, '刪除方案', {
+      confirmButtonText: '刪除',
+      cancelButtonText: '取消',
+      type: 'warning',
+      confirmButtonClass: 'el-button--danger',
+    })
+    await coachApi.deletePackage(pkg.id)
+    ElMessage.success('已刪除')
+    await fetchPackages()
+  } catch (err) {
+    if (err !== 'cancel') ElMessage.error(err.response?.data?.error || '刪除失敗')
+  }
+}
+
 onMounted(fetchPackages)
 </script>
 
@@ -130,8 +146,9 @@ onMounted(fetchPackages)
             未設定價格與效期
           </div>
         </div>
-        <div class="mt-4 pt-3 border-t border-gray-100">
-          <el-button size="small" class="w-full" @click="openEdit(pkg)">✏️ 編輯方案</el-button>
+        <div class="mt-4 pt-3 border-t border-gray-100 flex gap-2">
+          <el-button size="small" class="flex-1" @click="openEdit(pkg)">✏️ 編輯</el-button>
+          <el-button size="small" type="danger" @click="deletePackage(pkg)">🗑️ 刪除</el-button>
         </div>
       </div>
 

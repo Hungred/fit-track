@@ -39,6 +39,13 @@ export async function updatePackageTemplate(req, res) {
   res.json({ package: data })
 }
 
+export async function deletePackageTemplate(req, res) {
+  const { id } = req.params
+  const { error } = await supabase.from('packages').delete().eq('id', id)
+  if (error) return res.status(500).json({ error: error.message })
+  res.json({ ok: true })
+}
+
 // 指派方案給學員
 export async function assignPackage(req, res) {
   const { member_id, package_id, expires_at } = req.body
