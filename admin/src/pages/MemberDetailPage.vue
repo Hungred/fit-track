@@ -29,8 +29,9 @@ async function fetchData() {
     member.value = dashRes.data.members.find(m => m.id === memberId)
     checkins.value = checkinRes.data.checkins
     packages.value = member.value?.member_packages || []
-  } catch {
-    ElMessage.error('學員資料載入失敗，請重新整理')
+  } catch (err) {
+    const msg = err.response?.data?.error || err.message || '未知錯誤'
+    ElMessage.error(`載入失敗：${msg}`)
   } finally {
     loading.value = false
   }
