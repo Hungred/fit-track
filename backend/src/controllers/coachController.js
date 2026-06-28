@@ -54,11 +54,14 @@ export async function getMonthlyReport(req, res) {
   const { month } = req.query
   if (!month) return res.status(400).json({ error: '請提供 month 參數（格式：YYYY-MM）' })
 
+  const [year, mon] = month.split('-').map(Number)
+  const lastDay = new Date(year, mon, 0).getDate()
+
   const { data: checkins, error } = await supabase
     .from('checkins')
     .select('*, member:member_id(id, name), member_package:member_package_id(package:package_id(name))')
     .gte('checked_in_at', `${month}-01`)
-    .lte('checked_in_at', `${month}-31`)
+    .lte('checked_in_at', `${month}-${lastDay}`)
     .order('checked_in_at', { ascending: true })
 
   if (error) return res.status(500).json({ error: error.message })
@@ -95,7 +98,9 @@ export async function getAllCheckins(req, res) {
     .order('checked_in_at', { ascending: false })
 
   if (month) {
-    query = query.gte('checked_in_at', `${month}-01`).lte('checked_in_at', `${month}-31`)
+    const [year, mon] = month.split('-').map(Number)
+    const lastDay = new Date(year, mon, 0).getDate()
+    query = query.gte('checked_in_at', `${month}-01`).lte('checked_in_at', `${month}-${lastDay}`)
   }
   if (member_id) {
     query = query.eq('member_id', member_id)
