@@ -41,6 +41,17 @@ export async function updatePackageTemplate(req, res) {
 
 export async function deletePackageTemplate(req, res) {
   const { id } = req.params
+
+  // 檢查是否有學員持有此方案
+  const { count } = await supabase
+    .from('member_packages')
+    .select('id', { count: 'exact', head: true })
+    .eq('package_id', id)
+
+  if (count > 0) {
+    return res.status(400).json({ error: `此方案已有 ${count} 位學員使用中，無法刪除。請先將學員改為其他方案。` })
+  }
+
   const { error } = await supabase.from('packages').delete().eq('id', id)
   if (error) return res.status(500).json({ error: error.message })
   res.json({ ok: true })
