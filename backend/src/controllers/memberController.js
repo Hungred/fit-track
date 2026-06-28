@@ -34,7 +34,7 @@ export async function getCheckinHistory(req, res) {
 
   let query = supabase
     .from('checkins')
-    .select('*, member_package:member_packages(package:packages(name))')
+    .select('*, member_package:member_package_id(package:package_id(name))')
     .eq('member_id', req.member.id)
     .order('checked_in_at', { ascending: false })
 

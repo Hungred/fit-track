@@ -36,7 +36,7 @@ export async function getAllCheckins(req, res) {
 
   let query = supabase
     .from('checkins')
-    .select('*, member:members(name), member_package:member_packages(package:packages(name))')
+    .select('*, member:member_id(name), member_package:member_package_id(package:package_id(name))')
     .order('checked_in_at', { ascending: false })
 
   if (month) {
