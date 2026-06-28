@@ -1,4 +1,5 @@
 import supabase from '../lib/supabase.js'
+import { pushMessage, lowSessionMessage } from '../lib/line.js'
 
 export async function checkin(req, res) {
   const { method = 'button', qr_token } = req.body
@@ -57,18 +58,42 @@ export async function checkin(req, res) {
 
   if (checkinError) return res.status(500).json({ error: checkinError.message })
 
+  const remaining = targetPackage.remaining_sessions - 1
+
   // 扣除堂數
   const { error: deductError } = await supabase
     .from('member_packages')
-    .update({ remaining_sessions: targetPackage.remaining_sessions - 1 })
+    .update({ remaining_sessions: remaining })
     .eq('id', targetPackage.id)
 
   if (deductError) return res.status(500).json({ error: deductError.message })
 
+  // 堂數剩 2 堂以下，推播提醒
+  if (remaining <= 2) {
+    const { data: memberData } = await supabase
+      .from('members')
+      .select('name, line_uid')
+      .eq('id', memberId)
+      .single()
+
+    const { data: pkgData } = await supabase
+      .from('packages')
+      .select('name')
+      .eq('id', targetPackage.package_id)
+      .single()
+
+    if (memberData?.line_uid) {
+      pushMessage(
+        memberData.line_uid,
+        lowSessionMessage(memberData.name, remaining, pkgData?.name || '課程方案')
+      ).catch(() => {}) // 推播失敗不影響簽到
+    }
+  }
+
   res.json({
     message: '簽到成功！',
     checkin,
-    remaining_sessions: targetPackage.remaining_sessions - 1,
+    remaining_sessions: remaining,
     package_name: targetPackage.name,
   })
 }
@@ -103,10 +128,33 @@ export async function manualCheckin(req, res) {
 
   if (error) return res.status(500).json({ error: error.message })
 
+  const remaining = targetPackage.remaining_sessions - 1
+
   await supabase
     .from('member_packages')
-    .update({ remaining_sessions: targetPackage.remaining_sessions - 1 })
+    .update({ remaining_sessions: remaining })
     .eq('id', targetPackage.id)
+
+  if (remaining <= 2) {
+    const { data: memberData } = await supabase
+      .from('members')
+      .select('name, line_uid')
+      .eq('id', member_id)
+      .single()
+
+    const { data: pkgData } = await supabase
+      .from('packages')
+      .select('name')
+      .eq('id', targetPackage.package_id)
+      .single()
+
+    if (memberData?.line_uid) {
+      pushMessage(
+        memberData.line_uid,
+        lowSessionMessage(memberData.name, remaining, pkgData?.name || '課程方案')
+      ).catch(() => {})
+    }
+  }
 
   res.json({ message: '補登成功', checkin })
 }
