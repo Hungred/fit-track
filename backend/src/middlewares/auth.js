@@ -8,6 +8,7 @@ export async function requireMember(req, res, next) {
     .from('members')
     .select('*')
     .eq('line_uid', lineUid)
+    .eq('gym_id', req.gym.id)
     .single()
 
   if (error || !member) return res.status(401).json({ error: '找不到學員資料，請先完成綁定' })
@@ -25,6 +26,7 @@ export async function requireCoach(req, res, next) {
     .select('*')
     .eq('line_uid', lineUid)
     .eq('role', 'coach')
+    .eq('gym_id', req.gym.id)
     .single()
 
   if (error || !member) return res.status(403).json({ error: '無教練權限' })

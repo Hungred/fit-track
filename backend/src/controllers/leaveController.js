@@ -3,12 +3,13 @@ import supabase from '../lib/supabase.js'
 export async function requestLeave(req, res) {
   const { leave_date, reason } = req.body
   const memberId = req.member.id
+  const gymId = req.gym.id
 
   if (!leave_date) return res.status(400).json({ error: '請提供請假日期' })
 
   const { data, error } = await supabase
     .from('leaves')
-    .insert({ member_id: memberId, leave_date, reason: reason || null })
+    .insert({ member_id: memberId, leave_date, reason: reason || null, gym_id: gymId })
     .select()
     .single()
 
@@ -29,6 +30,7 @@ export async function cancelLeave(req, res) {
     .delete()
     .eq('member_id', memberId)
     .eq('leave_date', leave_date)
+    .eq('gym_id', req.gym.id)
 
   if (error) return res.status(500).json({ error: error.message })
   res.json({ message: '已取消請假' })
@@ -39,6 +41,7 @@ export async function getMyLeaves(req, res) {
     .from('leaves')
     .select('*')
     .eq('member_id', req.member.id)
+    .eq('gym_id', req.gym.id)
     .order('leave_date', { ascending: false })
     .limit(20)
 
@@ -53,6 +56,7 @@ export async function getTodayLeaves(req, res) {
     .from('leaves')
     .select('*, member:member_id(id, name)')
     .eq('leave_date', date)
+    .eq('gym_id', req.gym.id)
 
   if (error) return res.status(500).json({ error: error.message })
   res.json({ leaves: data })

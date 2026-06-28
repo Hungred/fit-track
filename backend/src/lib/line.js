@@ -2,15 +2,16 @@ import axios from 'axios'
 
 const LINE_API = 'https://api.line.me/v2/bot/message/push'
 
-export async function pushMessage(lineUid, messages) {
-  if (!lineUid || !process.env.LINE_CHANNEL_ACCESS_TOKEN) return
+export async function pushMessage(lineUid, messages, token = null) {
+  const accessToken = token || process.env.LINE_CHANNEL_ACCESS_TOKEN
+  if (!lineUid || !accessToken) return
 
   await axios.post(
     LINE_API,
     { to: lineUid, messages },
     {
       headers: {
-        Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
     }

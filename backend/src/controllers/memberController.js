@@ -4,12 +4,16 @@ export async function bindMember(req, res) {
   const { name, phone } = req.body
   const lineUid = req.headers['x-line-uid']
   const lineDisplayName = req.headers['x-line-display-name'] || ''
+  const gymId = req.gym.id
 
   if (!name || !phone) return res.status(400).json({ error: '姓名與電話為必填' })
 
   const { data, error } = await supabase
     .from('members')
-    .upsert({ line_uid: lineUid, name, phone, display_name: lineDisplayName, role: 'member' }, { onConflict: 'line_uid' })
+    .upsert(
+      { line_uid: lineUid, name, phone, display_name: lineDisplayName, role: 'member', gym_id: gymId },
+      { onConflict: 'line_uid' }
+    )
     .select()
     .single()
 
@@ -22,6 +26,7 @@ export async function getMe(req, res) {
     .from('member_packages')
     .select('*, package:packages(name)')
     .eq('member_id', req.member.id)
+    .eq('gym_id', req.gym.id)
     .gt('remaining_sessions', 0)
     .order('created_at', { ascending: true })
 
@@ -36,6 +41,7 @@ export async function getCheckinHistory(req, res) {
     .from('checkins')
     .select('*, member_package:member_package_id(package:package_id(name))')
     .eq('member_id', req.member.id)
+    .eq('gym_id', req.gym.id)
     .order('checked_in_at', { ascending: false })
 
   if (month) {

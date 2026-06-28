@@ -2,16 +2,17 @@ import supabase from '../lib/supabase.js'
 
 export async function adminLogin(req, res) {
   const { password } = req.body
+  const gym = req.gym
 
-  if (!password || password !== process.env.ADMIN_PASSWORD) {
+  if (!password || password !== gym.admin_password) {
     return res.status(401).json({ error: '密碼錯誤' })
   }
 
-  // 取得第一位教練帳號
   const { data: coach, error } = await supabase
     .from('members')
     .select('id, name, line_uid')
     .eq('role', 'coach')
+    .eq('gym_id', gym.id)
     .single()
 
   if (error || !coach) {

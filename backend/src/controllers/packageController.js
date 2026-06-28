@@ -1,10 +1,10 @@
 import supabase from '../lib/supabase.js'
 
-// 取得所有方案範本（教練設定）
 export async function listPackageTemplates(req, res) {
   const { data, error } = await supabase
     .from('packages')
     .select('*')
+    .eq('gym_id', req.gym.id)
     .order('created_at', { ascending: false })
 
   if (error) return res.status(500).json({ error: error.message })
@@ -16,7 +16,7 @@ export async function createPackageTemplate(req, res) {
 
   const { data, error } = await supabase
     .from('packages')
-    .insert({ name, total_sessions, price_per_session, price_total, valid_days })
+    .insert({ name, total_sessions, price_per_session, price_total, valid_days, gym_id: req.gym.id })
     .select()
     .single()
 
@@ -32,6 +32,7 @@ export async function updatePackageTemplate(req, res) {
     .from('packages')
     .update({ name, total_sessions, price_per_session, price_total, valid_days })
     .eq('id', id)
+    .eq('gym_id', req.gym.id)
     .select()
     .single()
 
@@ -42,29 +43,29 @@ export async function updatePackageTemplate(req, res) {
 export async function deletePackageTemplate(req, res) {
   const { id } = req.params
 
-  // 檢查是否有學員持有此方案
   const { count } = await supabase
     .from('member_packages')
     .select('id', { count: 'exact', head: true })
     .eq('package_id', id)
 
   if (count > 0) {
-    return res.status(400).json({ error: `此方案已有 ${count} 位學員使用中，無法刪除。請先將學員改為其他方案。` })
+    return res.status(400).json({ error: `此方案已有 ${count} 位學員使用中，無法刪除。` })
   }
 
-  const { error } = await supabase.from('packages').delete().eq('id', id)
+  const { error } = await supabase.from('packages').delete().eq('id', id).eq('gym_id', req.gym.id)
   if (error) return res.status(500).json({ error: error.message })
   res.json({ ok: true })
 }
 
-// 指派方案給學員
 export async function assignPackage(req, res) {
   const { member_id, package_id, expires_at } = req.body
+  const gymId = req.gym.id
 
   const { data: pkg } = await supabase
     .from('packages')
     .select('*')
     .eq('id', package_id)
+    .eq('gym_id', gymId)
     .single()
 
   if (!pkg) return res.status(404).json({ error: '方案不存在' })
@@ -75,12 +76,7 @@ export async function assignPackage(req, res) {
 
   const { data, error } = await supabase
     .from('member_packages')
-    .insert({
-      member_id,
-      package_id,
-      remaining_sessions: pkg.total_sessions,
-      expires_at: expiresAt,
-    })
+    .insert({ member_id, package_id, remaining_sessions: pkg.total_sessions, expires_at: expiresAt, gym_id: gymId })
     .select()
     .single()
 
@@ -88,7 +84,6 @@ export async function assignPackage(req, res) {
   res.json({ member_package: data })
 }
 
-// 手動調整堂數
 export async function adjustSessions(req, res) {
   const { id } = req.params
   const { delta, notes } = req.body
@@ -97,6 +92,7 @@ export async function adjustSessions(req, res) {
     .from('member_packages')
     .select('remaining_sessions')
     .eq('id', id)
+    .eq('gym_id', req.gym.id)
     .single()
 
   if (!mp) return res.status(404).json({ error: '方案不存在' })
