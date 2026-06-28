@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { getDashboard, getAllCheckins, generateQrToken } from '../controllers/coachController.js'
+import { getDashboard, getAllCheckins, generateQrToken, getMonthlyReport } from '../controllers/coachController.js'
 import { listPackageTemplates, createPackageTemplate, updatePackageTemplate, deletePackageTemplate, assignPackage, adjustSessions } from '../controllers/packageController.js'
 import { requireCoach } from '../middlewares/auth.js'
 
@@ -9,6 +9,7 @@ router.use(requireCoach)
 
 router.get('/dashboard', getDashboard)
 router.get('/checkins', getAllCheckins)
+router.get('/report', getMonthlyReport)
 router.post('/qr-token', generateQrToken)
 
 router.get('/packages', listPackageTemplates)

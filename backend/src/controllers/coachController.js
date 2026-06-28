@@ -50,6 +50,42 @@ export async function generateQrToken(req, res) {
   })
 }
 
+export async function getMonthlyReport(req, res) {
+  const { month } = req.query
+  if (!month) return res.status(400).json({ error: '請提供 month 參數（格式：YYYY-MM）' })
+
+  const { data: checkins, error } = await supabase
+    .from('checkins')
+    .select('*, member:member_id(id, name), member_package:member_package_id(package:package_id(name))')
+    .gte('checked_in_at', `${month}-01`)
+    .lte('checked_in_at', `${month}-31`)
+    .order('checked_in_at', { ascending: true })
+
+  if (error) return res.status(500).json({ error: error.message })
+
+  // 彙整每位學員的出勤資料
+  const memberMap = {}
+  for (const c of checkins) {
+    const id = c.member?.id
+    if (!id) continue
+    if (!memberMap[id]) {
+      memberMap[id] = { id, name: c.member.name, count: 0, dates: [], methods: {} }
+    }
+    memberMap[id].count++
+    memberMap[id].dates.push(c.checked_in_at.slice(0, 10))
+    memberMap[id].methods[c.method] = (memberMap[id].methods[c.method] || 0) + 1
+  }
+
+  const breakdown = Object.values(memberMap).sort((a, b) => b.count - a.count)
+
+  res.json({
+    month,
+    total_checkins: checkins.length,
+    unique_members: breakdown.length,
+    breakdown,
+  })
+}
+
 export async function getAllCheckins(req, res) {
   const { month, member_id } = req.query
 
