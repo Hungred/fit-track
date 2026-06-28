@@ -3,7 +3,7 @@ import supabase from '../lib/supabase.js'
 export async function listGyms(req, res) {
   const { data: gyms, error } = await supabase
     .from('gyms')
-    .select('id, name, liff_id, status, created_at')
+    .select('id, name, liff_id, line_channel_secret, line_channel_access_token, admin_password, status, created_at')
     .order('created_at', { ascending: false })
 
   if (error) return res.status(500).json({ error: error.message })

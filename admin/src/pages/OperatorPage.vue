@@ -9,8 +9,20 @@ const router = useRouter()
 const gyms = ref([])
 const loading = ref(true)
 const showForm = ref(false)
+const showConfirm = ref(false)
 const editingGym = ref(null)
+const originalForm = ref({})
 const submitting = ref(false)
+const diffItems = ref([])
+
+const fieldLabels = {
+  name: '健身房名稱',
+  admin_password: '後台管理密碼',
+  line_channel_secret: 'LINE Channel Secret',
+  line_channel_access_token: 'LINE Channel Access Token',
+  liff_id: 'LIFF ID',
+  status: '狀態',
+}
 
 const emptyForm = () => ({
   name: '', line_channel_secret: '', line_channel_access_token: '', liff_id: '', admin_password: '', status: 'active'
@@ -38,28 +50,50 @@ function openCreate() {
 
 function openEdit(gym) {
   editingGym.value = gym
-  form.value = {
-    name: gym.name,
-    line_channel_secret: '',
-    line_channel_access_token: '',
+  const f = {
+    name: gym.name || '',
+    line_channel_secret: gym.line_channel_secret || '',
+    line_channel_access_token: gym.line_channel_access_token || '',
     liff_id: gym.liff_id || '',
-    admin_password: '',
+    admin_password: gym.admin_password || '',
     status: gym.status,
   }
+  form.value = { ...f }
+  originalForm.value = { ...f }
   showForm.value = true
 }
 
-async function submitForm() {
+function maskSecret(val) {
+  if (!val) return '（空）'
+  if (val.length <= 8) return '****'
+  return val.slice(0, 4) + '****' + val.slice(-4)
+}
+
+function requestSubmit() {
   if (!form.value.name) { ElMessage.warning('請填寫健身房名稱'); return }
   if (!editingGym.value && !form.value.admin_password) { ElMessage.warning('請設定後台密碼'); return }
 
+  if (editingGym.value) {
+    const sensitiveFields = ['admin_password', 'line_channel_secret', 'line_channel_access_token']
+    const changed = Object.keys(form.value).filter(k => form.value[k] !== originalForm.value[k])
+    if (!changed.length) { ElMessage.info('沒有任何變更'); return }
+
+    diffItems.value = changed.map(k => ({
+      label: fieldLabels[k] || k,
+      before: sensitiveFields.includes(k) ? maskSecret(originalForm.value[k]) : (originalForm.value[k] || '（空）'),
+      after: sensitiveFields.includes(k) ? maskSecret(form.value[k]) : (form.value[k] || '（空）'),
+    }))
+    showConfirm.value = true
+  } else {
+    doSubmit()
+  }
+}
+
+async function doSubmit() {
+  showConfirm.value = false
   submitting.value = true
   try {
     const payload = { ...form.value }
-    if (!payload.line_channel_secret) delete payload.line_channel_secret
-    if (!payload.line_channel_access_token) delete payload.line_channel_access_token
-    if (!payload.admin_password) delete payload.admin_password
-
     if (editingGym.value) {
       await operatorApi.updateGym(editingGym.value.id, payload)
       ElMessage.success('更新成功')
@@ -184,15 +218,15 @@ onMounted(fetchGyms)
           <el-input v-model="form.name" placeholder="例如：Heavenfit Studio" />
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">後台管理密碼 {{ editingGym ? '（不填則不更新）' : '*' }}</label>
-          <el-input v-model="form.admin_password" type="password" placeholder="教練登入後台用的密碼" />
+          <label class="block text-sm text-gray-600 mb-1">後台管理密碼 *</label>
+          <el-input v-model="form.admin_password" type="password" show-password placeholder="教練登入後台用的密碼" />
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">LINE Channel Secret {{ editingGym ? '（不填則不更新）' : '' }}</label>
+          <label class="block text-sm text-gray-600 mb-1">LINE Channel Secret</label>
           <el-input v-model="form.line_channel_secret" placeholder="LINE Messaging API channel secret" />
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">LINE Channel Access Token {{ editingGym ? '（不填則不更新）' : '' }}</label>
+          <label class="block text-sm text-gray-600 mb-1">LINE Channel Access Token</label>
           <el-input v-model="form.line_channel_access_token" type="textarea" :rows="3" placeholder="LINE channel access token" />
         </div>
         <div>
@@ -202,9 +236,32 @@ onMounted(fetchGyms)
       </div>
       <template #footer>
         <el-button @click="showForm = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitForm"
+        <el-button type="primary" :loading="submitting" @click="requestSubmit"
           style="background:#2563eb;border-color:#2563eb">
           {{ editingGym ? '更新' : '新增' }}
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 確認變更 Dialog -->
+    <el-dialog v-model="showConfirm" title="確認變更內容" width="480px">
+      <p class="text-sm text-gray-500 mb-4">以下欄位將被更新，確認後送出：</p>
+      <div class="space-y-3">
+        <div v-for="item in diffItems" :key="item.label"
+          class="bg-gray-50 rounded-xl px-4 py-3 text-sm">
+          <p class="font-medium text-gray-700 mb-1">{{ item.label }}</p>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="text-red-400 line-through break-all">{{ item.before }}</span>
+            <span class="text-gray-400">→</span>
+            <span class="text-green-600 break-all">{{ item.after }}</span>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showConfirm = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="doSubmit"
+          style="background:#2563eb;border-color:#2563eb">
+          確認更新
         </el-button>
       </template>
     </el-dialog>
