@@ -2,6 +2,7 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 
+import authRouter from './routes/auth.js'
 import webhookRouter from './routes/webhook.js'
 import memberRouter from './routes/members.js'
 import checkinRouter from './routes/checkin.js'
@@ -18,6 +19,8 @@ app.use(cors({
 app.use(express.json())
 
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'Fit Track API' }))
+
+app.use('/api/auth', authRouter)
 
 app.use('/webhook', webhookRouter)
 app.use('/api/members', memberRouter)

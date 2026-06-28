@@ -6,20 +6,21 @@ import { ElMessage } from 'element-plus'
 
 const auth = useAuthStore()
 const router = useRouter()
-const uid = ref('')
+const password = ref('')
 const loading = ref(false)
+const showPassword = ref(false)
 
 async function handleLogin() {
-  if (!uid.value.trim()) {
-    ElMessage.warning('請輸入 LINE UID')
+  if (!password.value) {
+    ElMessage.warning('請輸入密碼')
     return
   }
   loading.value = true
   try {
-    await auth.login(uid.value.trim())
+    await auth.login(password.value)
     router.push('/')
-  } catch {
-    ElMessage.error('驗證失敗，請確認你的 LINE UID 是否為教練帳號')
+  } catch (err) {
+    ElMessage.error(err.response?.data?.error || '登入失敗')
   } finally {
     loading.value = false
   }
@@ -32,21 +33,28 @@ async function handleLogin() {
       <div class="text-center mb-8">
         <div class="text-5xl mb-3">🏋️</div>
         <h1 class="text-2xl font-bold text-gray-800">Fit Track 教練後台</h1>
-        <p class="text-gray-400 text-sm mt-2">請輸入你的 LINE UID 登入</p>
+        <p class="text-gray-400 text-sm mt-2">請輸入管理密碼</p>
       </div>
 
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">LINE UID</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">管理密碼</label>
           <el-input
-            v-model="uid"
-            placeholder="U開頭的32位字串"
+            v-model="password"
+            :type="showPassword ? 'text' : 'password'"
+            placeholder="請輸入密碼"
             size="large"
             @keyup.enter="handleLogin"
-          />
-          <p class="text-xs text-gray-400 mt-1">
-            可在 Supabase members 表格中查詢你的 line_uid
-          </p>
+          >
+            <template #suffix>
+              <span
+                class="cursor-pointer text-gray-400 hover:text-gray-600 text-sm"
+                @click="showPassword = !showPassword"
+              >
+                {{ showPassword ? '隱藏' : '顯示' }}
+              </span>
+            </template>
+          </el-input>
         </div>
         <el-button
           type="primary"

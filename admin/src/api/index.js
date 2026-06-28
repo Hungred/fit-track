@@ -8,6 +8,10 @@ export function setCoachHeader(lineUid) {
   api.defaults.headers.common['x-line-uid'] = lineUid
 }
 
+export const authApi = {
+  login: (password) => api.post('/api/auth/login', { password }),
+}
+
 export const coachApi = {
   getDashboard: () => api.get('/api/coach/dashboard'),
   getCheckins: (params) => api.get('/api/coach/checkins', { params }),

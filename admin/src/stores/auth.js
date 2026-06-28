@@ -1,36 +1,36 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { setCoachHeader } from '../api/index.js'
-import { coachApi } from '../api/index.js'
+import { authApi, setCoachHeader } from '../api/index.js'
 
 export const useAuthStore = defineStore('auth', () => {
-  const lineUid = ref(localStorage.getItem('coach_uid') || '')
   const isAuth = ref(false)
+  const coachName = ref(localStorage.getItem('coach_name') || '')
+  const lineUid = ref(localStorage.getItem('coach_uid') || '')
 
-  async function login(uid) {
-    setCoachHeader(uid)
-    await coachApi.getDashboard() // 驗證是否為教練身份
-    lineUid.value = uid
+  async function login(password) {
+    const res = await authApi.login(password)
+    const { coach } = res.data
     isAuth.value = true
-    localStorage.setItem('coach_uid', uid)
+    coachName.value = coach.name
+    lineUid.value = coach.line_uid
+    setCoachHeader(coach.line_uid)
+    localStorage.setItem('coach_uid', coach.line_uid)
+    localStorage.setItem('coach_name', coach.name)
   }
 
   async function restore() {
     if (!lineUid.value) return
-    try {
-      setCoachHeader(lineUid.value)
-      await coachApi.getDashboard()
-      isAuth.value = true
-    } catch {
-      logout()
-    }
+    setCoachHeader(lineUid.value)
+    isAuth.value = true
   }
 
   function logout() {
-    lineUid.value = ''
     isAuth.value = false
+    coachName.value = ''
+    lineUid.value = ''
     localStorage.removeItem('coach_uid')
+    localStorage.removeItem('coach_name')
   }
 
-  return { lineUid, isAuth, login, restore, logout }
+  return { isAuth, coachName, lineUid, login, restore, logout }
 })
