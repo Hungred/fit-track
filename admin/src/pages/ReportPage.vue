@@ -26,15 +26,19 @@ async function fetchReport() {
   }
 }
 
-// { 'YYYY-MM-DD': [{ id, name }, ...] }
+// { 'YYYY-MM-DD': [{ id, name, time, checkinAt }, ...] } sorted by time
 const dailyMap = computed(() => {
   if (!report.value) return {}
   const map = {}
   for (const member of report.value.breakdown) {
-    for (const date of member.dates) {
+    for (const checkinAt of member.dates) {
+      const date = checkinAt.slice(0, 10)
       if (!map[date]) map[date] = []
-      map[date].push({ id: member.id, name: member.name })
+      map[date].push({ id: member.id, name: member.name, time: dayjs(checkinAt).format('HH:mm'), checkinAt })
     }
+  }
+  for (const date in map) {
+    map[date].sort((a, b) => a.checkinAt.localeCompare(b.checkinAt))
   }
   return map
 })
@@ -151,12 +155,13 @@ onMounted(fetchReport)
               當日無出勤記錄
             </div>
             <div v-else class="space-y-2">
-              <div v-for="(m, idx) in selectedDayMembers" :key="m.id"
+              <div v-for="(m, idx) in selectedDayMembers" :key="m.checkinAt"
                 class="flex items-center gap-3 px-3 py-2.5 bg-gray-50 rounded-xl">
                 <span class="w-6 h-6 rounded-full bg-green-100 text-green-600 text-xs font-bold flex items-center justify-center shrink-0">
                   {{ idx + 1 }}
                 </span>
-                <span class="text-sm font-medium text-gray-800">{{ m.name }}</span>
+                <span class="text-sm font-medium text-gray-800 flex-1">{{ m.name }}</span>
+                <span class="text-xs text-gray-400 shrink-0">{{ m.time }}</span>
               </div>
             </div>
           </template>

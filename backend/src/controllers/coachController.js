@@ -96,7 +96,7 @@ export async function getMonthlyReport(req, res) {
       memberMap[id] = { id, name: c.member.name, count: 0, dates: [], methods: {} }
     }
     memberMap[id].count++
-    memberMap[id].dates.push(c.checked_in_at.slice(0, 10))
+    memberMap[id].dates.push(c.checked_in_at)
     memberMap[id].methods[c.method] = (memberMap[id].methods[c.method] || 0) + 1
   }
 
