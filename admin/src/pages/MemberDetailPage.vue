@@ -22,19 +22,26 @@ const submitting = ref(false)
 async function fetchData() {
   loading.value = true
   try {
-    const [dashRes, pkgRes, checkinRes] = await Promise.all([
+    const [dashRes, checkinRes] = await Promise.all([
       coachApi.getDashboard(),
-      coachApi.getPackages(),
       coachApi.getCheckins({ member_id: memberId }),
     ])
     member.value = dashRes.data.members.find(m => m.id === memberId)
-    allPackages.value = pkgRes.data.packages
     checkins.value = checkinRes.data.checkins
     packages.value = member.value?.member_packages || []
   } catch {
-    ElMessage.error('載入失敗')
+    ElMessage.error('學員資料載入失敗，請重新整理')
   } finally {
     loading.value = false
+  }
+}
+
+async function fetchPackages() {
+  try {
+    const res = await coachApi.getPackages()
+    allPackages.value = res.data.packages
+  } catch {
+    ElMessage.error('方案列表載入失敗')
   }
 }
 
@@ -53,6 +60,7 @@ async function assignPackage() {
     ElMessage.success('方案指派成功')
     showAssign.value = false
     await fetchData()
+    await fetchPackages()
   } catch (err) {
     ElMessage.error(err.response?.data?.error || '指派失敗')
   } finally {
@@ -70,7 +78,10 @@ async function adjustSessions(pkgId, delta) {
   }
 }
 
-onMounted(fetchData)
+onMounted(() => {
+  fetchData()
+  fetchPackages()
+})
 </script>
 
 <template>

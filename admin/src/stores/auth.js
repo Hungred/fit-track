@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { authApi, setCoachHeader } from '../api/index.js'
 
 export const useAuthStore = defineStore('auth', () => {
-  const isAuth = ref(false)
+  const isAuth = ref(!!localStorage.getItem('coach_uid'))
   const coachName = ref(localStorage.getItem('coach_name') || '')
   const lineUid = ref(localStorage.getItem('coach_uid') || '')
 
