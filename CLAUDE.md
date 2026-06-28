@@ -142,7 +142,7 @@ POST   /webhook                     LINE Webhook
 
 ## 待完成功能
 
-- [ ] QR Code 簽到（防代打卡，qr_tokens 表已建立）
+- [x] QR Code 簽到（教練後台產生，10 分鐘有效，自動刷新）
 - [ ] 月報表統計
 - [ ] 請假功能
 
