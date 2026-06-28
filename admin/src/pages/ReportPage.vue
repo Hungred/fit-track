@@ -7,14 +7,17 @@ import dayjs from 'dayjs'
 const month = ref(dayjs().format('YYYY-MM'))
 const report = ref(null)
 const loading = ref(false)
+const errorMsg = ref('')
 
 async function fetchReport() {
   loading.value = true
+  errorMsg.value = ''
   try {
     const res = await coachApi.getReport(month.value)
     report.value = res.data
-  } catch {
+  } catch (err) {
     report.value = null
+    errorMsg.value = err.response?.data?.error || err.message || '載入失敗'
   } finally {
     loading.value = false
   }
@@ -42,6 +45,12 @@ onMounted(fetchReport)
     </div>
 
     <div v-if="loading" class="text-center py-16 text-gray-400">載入中...</div>
+
+    <div v-else-if="errorMsg" class="text-center py-16 text-red-400">
+      {{ errorMsg }}
+      <br />
+      <el-button class="mt-4" @click="fetchReport">重試</el-button>
+    </div>
 
     <template v-else-if="report">
       <!-- 統計卡片 -->
