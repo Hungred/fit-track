@@ -46,6 +46,15 @@ export async function createGym(req, res) {
     .single()
 
   if (error) return res.status(500).json({ error: error.message })
+
+  await supabase.from('members').insert({
+    name: '教練',
+    phone: '',
+    line_uid: `coach_${data.id}`,
+    role: 'coach',
+    gym_id: data.id,
+  })
+
   res.json({ gym: data })
 }
 
