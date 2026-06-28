@@ -24,6 +24,21 @@ export async function createPackageTemplate(req, res) {
   res.json({ package: data })
 }
 
+export async function updatePackageTemplate(req, res) {
+  const { id } = req.params
+  const { name, total_sessions, price_per_session, price_total, valid_days } = req.body
+
+  const { data, error } = await supabase
+    .from('packages')
+    .update({ name, total_sessions, price_per_session, price_total, valid_days })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.json({ package: data })
+}
+
 // 指派方案給學員
 export async function assignPackage(req, res) {
   const { member_id, package_id, expires_at } = req.body
