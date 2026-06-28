@@ -14,6 +14,7 @@ function logout() {
 const navItems = [
   { path: '/', label: '出勤總覽', icon: '📊' },
   { path: '/packages', label: '方案管理', icon: '📦' },
+  { path: '/qr', label: 'QR Code 簽到', icon: '📷' },
 ]
 </script>
 

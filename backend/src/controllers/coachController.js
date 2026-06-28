@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import supabase from '../lib/supabase.js'
 
 export async function getDashboard(req, res) {
@@ -29,6 +30,24 @@ export async function getDashboard(req, res) {
   }))
 
   res.json({ members: result })
+}
+
+export async function generateQrToken(req, res) {
+  const token = crypto.randomUUID()
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 分鐘有效
+
+  const { error } = await supabase
+    .from('qr_tokens')
+    .insert({ token, expires_at: expiresAt.toISOString() })
+
+  if (error) return res.status(500).json({ error: error.message })
+
+  const liffUrl = process.env.LIFF_URL || 'https://fit-track-liff.vercel.app'
+  res.json({
+    token,
+    expires_at: expiresAt.toISOString(),
+    qr_url: `${liffUrl}/?token=${token}`,
+  })
 }
 
 export async function getAllCheckins(req, res) {

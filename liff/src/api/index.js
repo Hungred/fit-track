@@ -17,5 +17,6 @@ export const memberApi = {
 }
 
 export const checkinApi = {
-  checkin: (method = 'button') => api.post('/api/checkin', { method }),
+  checkin: (method = 'button', qr_token = null) =>
+    api.post('/api/checkin', { method, ...(qr_token && { qr_token }) }),
 }

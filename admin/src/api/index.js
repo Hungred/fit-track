@@ -23,4 +23,5 @@ export const coachApi = {
   deletePackage: (id) => api.delete(`/api/coach/packages/${id}`),
   assignPackage: (data) => api.post('/api/coach/packages/assign', data),
   adjustSessions: (id, data) => api.patch(`/api/coach/member-packages/${id}/adjust`, data),
+  generateQrToken: () => api.post('/api/coach/qr-token'),
 }

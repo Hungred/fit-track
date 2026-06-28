@@ -1,20 +1,21 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '../stores/user.js'
 import { checkinApi } from '../api/index.js'
 import { ElMessage } from 'element-plus'
 
 const store = useUserStore()
 const router = useRouter()
+const route = useRoute()
 const checkingIn = ref(false)
 
 const totalSessions = () => store.packages.reduce((sum, p) => sum + p.remaining_sessions, 0)
 
-async function handleCheckin() {
+async function handleCheckin(method = 'button', token = null) {
   checkingIn.value = true
   try {
-    const res = await checkinApi.checkin('button')
+    const res = await checkinApi.checkin(method, token)
     ElMessage.success(res.data.message)
     await store.init()
   } catch (err) {
@@ -23,6 +24,11 @@ async function handleCheckin() {
     checkingIn.value = false
   }
 }
+
+onMounted(() => {
+  const token = route.query.token
+  if (token) handleCheckin('qr', token)
+})
 </script>
 
 <template>
