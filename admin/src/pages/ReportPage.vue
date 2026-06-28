@@ -14,7 +14,7 @@ const selectedDate = ref(today)
 async function fetchReport() {
   loading.value = true
   errorMsg.value = ''
-  selectedDate.value = null
+  selectedDate.value = today
   try {
     const res = await coachApi.getReport(month.value)
     report.value = res.data
