@@ -28,6 +28,9 @@ async function bootstrap() {
   if (gymId) {
     store.setGym(gymId)
     await store.init()
+    if (!store.initError) {
+      await router.push(store.member ? '/' : '/bind')
+    }
   } else {
     store.loading = false
     store.initError = '缺少健身房資訊，請透過 LINE 選單開啟'
