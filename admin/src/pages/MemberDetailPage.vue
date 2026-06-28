@@ -30,8 +30,10 @@ async function fetchData() {
     checkins.value = checkinRes.data.checkins
     packages.value = member.value?.member_packages || []
   } catch (err) {
-    const msg = err.response?.data?.error || err.message || '未知錯誤'
-    ElMessage.error(`載入失敗：${msg}`)
+    if (err.response?.status !== 404) ElMessage.error('載入失敗')
+    member.value = null
+    checkins.value = []
+    packages.value = []
   } finally {
     loading.value = false
   }
@@ -42,7 +44,7 @@ async function fetchPackages() {
     const res = await coachApi.getPackages()
     allPackages.value = res.data.packages
   } catch {
-    ElMessage.error('方案列表載入失敗')
+    // 靜默失敗，不影響頁面顯示
   }
 }
 

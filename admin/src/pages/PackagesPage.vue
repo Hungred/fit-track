@@ -17,8 +17,9 @@ async function fetchPackages() {
   try {
     const res = await coachApi.getPackages()
     packages.value = res.data.packages
-  } catch {
-    ElMessage.error('載入失敗')
+  } catch (err) {
+    if (err.response?.status !== 404) ElMessage.error('載入失敗')
+    packages.value = []
   } finally {
     loading.value = false
   }

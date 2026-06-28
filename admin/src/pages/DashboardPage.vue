@@ -32,8 +32,9 @@ async function fetchDashboard() {
     ])
     members.value = dashRes.data.members
     todayLeaveIds.value = new Set(leaveRes.data.leaves.map(l => l.member?.id))
-  } catch {
-    ElMessage.error('載入失敗')
+  } catch (err) {
+    if (err.response?.status !== 404) ElMessage.error('載入失敗')
+    members.value = []
   } finally {
     loading.value = false
   }
