@@ -12,11 +12,11 @@ export async function listPackageTemplates(req, res) {
 }
 
 export async function createPackageTemplate(req, res) {
-  const { name, total_sessions, price, valid_days } = req.body
+  const { name, total_sessions, price_per_session, price_total, valid_days } = req.body
 
   const { data, error } = await supabase
     .from('packages')
-    .insert({ name, total_sessions, price, valid_days })
+    .insert({ name, total_sessions, price_per_session, price_total, valid_days })
     .select()
     .single()
 

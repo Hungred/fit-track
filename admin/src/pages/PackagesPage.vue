@@ -7,7 +7,7 @@ import Layout from '../components/Layout.vue'
 const packages = ref([])
 const loading = ref(true)
 const showCreate = ref(false)
-const form = ref({ name: '', total_sessions: '', price: '', valid_days: '' })
+const form = ref({ name: '', total_sessions: '', price_per_session: '', price_total: '', valid_days: '' })
 const submitting = ref(false)
 
 async function fetchPackages() {
@@ -32,12 +32,13 @@ async function createPackage() {
     await coachApi.createPackage({
       name: form.value.name,
       total_sessions: Number(form.value.total_sessions),
-      price: form.value.price ? Number(form.value.price) : null,
+      price_per_session: form.value.price_per_session ? Number(form.value.price_per_session) : null,
+      price_total: form.value.price_total ? Number(form.value.price_total) : null,
       valid_days: form.value.valid_days ? Number(form.value.valid_days) : null,
     })
     ElMessage.success('方案建立成功')
     showCreate.value = false
-    form.value = { name: '', total_sessions: '', price: '', valid_days: '' }
+    form.value = { name: '', total_sessions: '', price_per_session: '', price_total: '', valid_days: '' }
     await fetchPackages()
   } catch (err) {
     ElMessage.error(err.response?.data?.error || '建立失敗')
@@ -72,10 +73,22 @@ onMounted(fetchPackages)
           <span class="text-2xl font-bold text-green-600">{{ pkg.total_sessions }}</span>
         </div>
         <p class="text-sm text-gray-400">堂數</p>
-        <div class="mt-3 flex gap-3 text-sm text-gray-500">
-          <span v-if="pkg.price">💰 NT$ {{ pkg.price }}</span>
-          <span v-if="pkg.valid_days">📅 {{ pkg.valid_days }} 天效期</span>
-          <span v-if="!pkg.valid_days && !pkg.price" class="text-gray-300">無到期限制</span>
+        <div class="mt-3 space-y-1 text-sm text-gray-500">
+          <div v-if="pkg.price_per_session" class="flex justify-between">
+            <span>單堂售價</span>
+            <span class="font-medium text-gray-700">NT$ {{ pkg.price_per_session }}</span>
+          </div>
+          <div v-if="pkg.price_total" class="flex justify-between">
+            <span>整包售價</span>
+            <span class="font-medium text-gray-700">NT$ {{ pkg.price_total }}</span>
+          </div>
+          <div v-if="pkg.valid_days" class="flex justify-between">
+            <span>效期</span>
+            <span class="font-medium text-gray-700">{{ pkg.valid_days }} 天</span>
+          </div>
+          <div v-if="!pkg.price_per_session && !pkg.price_total && !pkg.valid_days" class="text-gray-300 text-xs">
+            未設定價格與效期
+          </div>
         </div>
       </div>
 
@@ -96,8 +109,14 @@ onMounted(fetchPackages)
           <el-input v-model="form.total_sessions" type="number" placeholder="10" />
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">售價（選填）</label>
-          <el-input v-model="form.price" type="number" placeholder="3000">
+          <label class="block text-sm text-gray-600 mb-1">單堂售價（選填）</label>
+          <el-input v-model="form.price_per_session" type="number" placeholder="350">
+            <template #prepend>NT$</template>
+          </el-input>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">整包售價（選填）</label>
+          <el-input v-model="form.price_total" type="number" placeholder="3000">
             <template #prepend>NT$</template>
           </el-input>
         </div>
