@@ -137,7 +137,8 @@ onMounted(() => { fetchGyms() })
 <template>
   <div class="min-h-screen bg-gray-50">
     <!-- Header -->
-    <div class="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+    <div class="bg-white border-b border-gray-100 px-6 pb-4 flex items-center justify-between"
+      style="padding-top: max(env(safe-area-inset-top), 1rem)">
       <div>
         <h1 class="text-lg font-bold text-blue-600">📓 Fit Track 營運後台</h1>
         <p class="text-xs text-gray-400">健身房管理</p>

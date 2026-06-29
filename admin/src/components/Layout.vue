@@ -68,7 +68,8 @@ async function submitChangePwd() {
   <div class="min-h-screen bg-gray-50">
 
     <!-- 手機頂部 header -->
-    <header class="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-100 flex items-center px-4 z-30">
+    <header class="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-100 flex items-center px-4 z-30"
+      style="height: calc(3.5rem + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top)">
       <button
         @click="menuOpen = !menuOpen"
         class="p-2 rounded-xl hover:bg-gray-100 transition-colors mr-3"
@@ -110,7 +111,7 @@ async function submitChangePwd() {
         </router-link>
       </div>
       <!-- 手機版 header 佔位 -->
-      <div class="h-14 lg:hidden" />
+      <div class="lg:hidden" style="height: calc(3.5rem + env(safe-area-inset-top))" />
 
       <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
         <router-link
@@ -168,7 +169,7 @@ async function submitChangePwd() {
     </el-dialog>
 
     <!-- Main content -->
-    <main class="lg:ml-56 pt-14 lg:pt-0 p-4 lg:p-6">
+    <main class="lg:ml-56 lg:pt-0 p-4 lg:p-6 main-content">
       <slot />
     </main>
   </div>
@@ -177,4 +178,10 @@ async function submitChangePwd() {
 <style scoped>
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+@media (max-width: 1023px) {
+  .main-content {
+    padding-top: calc(3.5rem + env(safe-area-inset-top)) !important;
+  }
+}
 </style>

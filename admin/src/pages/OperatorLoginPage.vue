@@ -25,7 +25,8 @@ async function handleLogin() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4">
+  <div class="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4"
+    style="padding-top: max(env(safe-area-inset-top), 1rem)">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8">
       <div class="text-center mb-8">
         <div class="text-5xl mb-3">📓</div>
