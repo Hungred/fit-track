@@ -1,4 +1,6 @@
+import bcrypt from 'bcrypt'
 import supabase from '../lib/supabase.js'
+import { ALL_PERMISSIONS } from '../lib/permissions.js'
 
 export async function listGyms(req, res) {
   const { data: gyms, error } = await supabase
@@ -42,10 +44,15 @@ export async function createGym(req, res) {
 
   if (error) return res.status(500).json({ error: error.message })
 
+  const coach_password = await bcrypt.hash(admin_password, 10)
   await supabase.from('members').insert({
     name: '教練',
     phone: '',
     line_uid: `coach_${data.id}`,
+    username: 'admin',
+    coach_password,
+    permissions: ALL_PERMISSIONS,
+    is_owner: true,
     role: 'coach',
     gym_id: data.id,
   })

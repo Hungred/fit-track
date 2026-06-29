@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { authApi } from '../api/index.js'
@@ -14,12 +14,18 @@ function logout() {
   router.push('/login')
 }
 
-const navItems = [
-  { path: '/', label: '出勤總覽', icon: '📊' },
-  { path: '/packages', label: '方案管理', icon: '📦' },
-  { path: '/qr', label: 'QR Code 簽到', icon: '📷' },
-  { path: '/report', label: '月報表', icon: '📈' },
+const allNavItems = [
+  { path: '/', label: '出勤總覽', icon: '📊', permission: null },
+  { path: '/members', label: '學員管理', icon: '👥', permission: 'members:list' },
+  { path: '/packages', label: '方案管理', icon: '📦', permission: 'packages:list' },
+  { path: '/qr', label: 'QR Code 簽到', icon: '📷', permission: 'qr:generate' },
+  { path: '/report', label: '月報表', icon: '📈', permission: 'report:view' },
+  { path: '/coaches', label: '教練管理', icon: '🏋️', permission: 'coaches:list' },
 ]
+
+const navItems = computed(() =>
+  allNavItems.filter(item => !item.permission || auth.hasPermission(item.permission))
+)
 
 const showChangePwd = ref(false)
 const pwdForm = ref({ current: '', next: '', confirm: '' })

@@ -17,6 +17,13 @@ export async function requireMember(req, res, next) {
   next()
 }
 
+export async function requireOwner(req, res, next) {
+  if (!req.member?.is_owner) {
+    return res.status(403).json({ error: '需要主教練權限' })
+  }
+  next()
+}
+
 export async function requireCoach(req, res, next) {
   const lineUid = req.headers['x-line-uid']
   if (!lineUid) return res.status(401).json({ error: '未授權' })

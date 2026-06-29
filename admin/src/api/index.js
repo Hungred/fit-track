@@ -7,9 +7,10 @@ const api = axios.create({
 api.interceptors.response.use(
   res => res,
   err => {
-    if (err.response?.status === 401 || err.response?.status === 403) {
+    if (err.response?.status === 401) {
       localStorage.removeItem('coach_uid')
       localStorage.removeItem('coach_name')
+      localStorage.removeItem('permissions')
       window.location.href = '/login'
     }
     return Promise.reject(err)
@@ -25,7 +26,7 @@ export function setGymHeader(gymId) {
 }
 
 export const authApi = {
-  login: (password) => api.post('/api/auth/login', { password }),
+  login: (username, password) => api.post('/api/auth/login', { username, password }),
   changePassword: (current_password, new_password) => api.post('/api/auth/change-password', { current_password, new_password }),
 }
 
@@ -49,6 +50,13 @@ export const coachApi = {
   generateQrToken: () => api.post('/api/coach/qr-token'),
   getReport: (month) => api.get('/api/coach/report', { params: { month } }),
   getTodayLeaves: () => api.get('/api/coach/leaves'),
+}
+
+export const coachManageApi = {
+  list: () => api.get('/api/coach/coaches'),
+  create: (data) => api.post('/api/coach/coaches', data),
+  update: (id, data) => api.patch(`/api/coach/coaches/${id}`, data),
+  delete: (id) => api.delete(`/api/coach/coaches/${id}`),
 }
 
 export const operatorApi = {

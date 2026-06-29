@@ -7,6 +7,7 @@ import { ElMessage } from 'element-plus'
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
+const username = ref('')
 const password = ref('')
 const loading = ref(false)
 const showPassword = ref(false)
@@ -17,13 +18,13 @@ onMounted(() => {
 })
 
 async function handleLogin() {
-  if (!password.value) {
-    ElMessage.warning('請輸入密碼')
+  if (!username.value || !password.value) {
+    ElMessage.warning('請輸入帳號與密碼')
     return
   }
   loading.value = true
   try {
-    await auth.login(password.value)
+    await auth.login(username.value, password.value)
     router.push('/')
   } catch (err) {
     ElMessage.error(err.response?.data?.error || '登入失敗')
@@ -39,12 +40,21 @@ async function handleLogin() {
       <div class="text-center mb-8">
         <div class="text-5xl mb-3">🏋️</div>
         <h1 class="text-2xl font-bold text-gray-800">Fit Track 教練後台</h1>
-        <p class="text-gray-400 text-sm mt-2">請輸入管理密碼</p>
+        <p class="text-gray-400 text-sm mt-2">請輸入帳號與密碼</p>
       </div>
 
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">管理密碼</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">帳號</label>
+          <el-input
+            v-model="username"
+            placeholder="請輸入帳號"
+            size="large"
+            @keyup.enter="handleLogin"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">密碼</label>
           <el-input
             v-model="password"
             :type="showPassword ? 'text' : 'password'"

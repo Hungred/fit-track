@@ -3,11 +3,17 @@ import { getDashboard, getAllCheckins, generateQrToken, getMonthlyReport } from 
 import { updateCheckin, deleteCheckin } from '../controllers/checkinController.js'
 import { getTodayLeaves } from '../controllers/leaveController.js'
 import { listPackageTemplates, createPackageTemplate, updatePackageTemplate, deletePackageTemplate, assignPackage, adjustSessions, updateMemberPackage, deleteMemberPackage } from '../controllers/packageController.js'
-import { requireCoach } from '../middlewares/auth.js'
+import { listCoaches, createCoach, updateCoach, deleteCoach } from '../controllers/coachManageController.js'
+import { requireCoach, requireOwner } from '../middlewares/auth.js'
 
 const router = Router()
 
 router.use(requireCoach)
+
+router.get('/coaches', listCoaches)
+router.post('/coaches', requireOwner, createCoach)
+router.patch('/coaches/:id', requireOwner, updateCoach)
+router.delete('/coaches/:id', requireOwner, deleteCoach)
 
 router.get('/dashboard', getDashboard)
 router.get('/checkins', getAllCheckins)
