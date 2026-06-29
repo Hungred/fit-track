@@ -160,6 +160,7 @@ PATCH  /api/coach/coaches/:id           編輯教練（requireOwner）
 DELETE /api/coach/coaches/:id           刪除教練（requireOwner，不可刪自己或 is_owner）
 
 GET    /api/coach/classes               課程列表（query: month）
+POST   /api/coach/classes/batch         批次新增多堂課程並推播 LINE 邀請
 POST   /api/coach/classes               新增課程並推播 LINE 邀請
 GET    /api/coach/classes/:id           課程詳細（含出席狀態）
 PATCH  /api/coach/classes/:id           編輯課程
@@ -213,7 +214,11 @@ GET    /api/classes/:id/ical            下載課程 iCal 檔案
 - [x] LINE 新學員歡迎訊息（follow 事件觸發 Flex Message，含功能說明與立即綁定按鈕）
 - [x] 教練變更自己的登入密碼（Admin 後台側欄底部「變更密碼」）
 - [x] 多教練帳號 + 細粒度權限管理（`members` 表加 username/coach_password/permissions/is_owner，20 個 permission key）
-- [x] 排課系統（FullCalendar 月曆、LINE Flex Message 課程邀請、postback 確認/請假/討論、iCal 匯出、LIFF 課程清單）
+- [x] 排課系統（FullCalendar 月曆＋週視圖、事件顏色依確認狀態區分：灰=無學員/橘=待確認/綠=全確認）
+- [x] 批次新增課程（一次填多時段、送出前預覽、推播 LINE 邀請）
+- [x] LINE Flex Message 課程邀請、postback 確認/請假/討論、iCal 匯出
+- [x] LIFF 課程清單頁（學員查看即將上課的邀請與狀態）
+- [x] LIFF 圖文選單（立即簽到、我的堂數、出勤記錄、我的課程 四格）
 
 ---
 
@@ -263,3 +268,6 @@ GET    /api/classes/:id/ical            下載課程 iCal 檔案
 10. **SQL 中 JSON 字串換行**：手動拼接 JSON 字串若含換行符會報 invalid input syntax for type json，改用 `jsonb_build_array()` 函式避免
 11. **簽到時區 bug**：server 用 UTC，`new Date().toISOString().slice(0,10)` 取到的是 UTC 日期，台灣 UTC+8 跨日時防重複簽到判斷會錯，時間範圍要用 `+08:00` 的起訖
 12. **LINE 歡迎訊息沒收到**：Render 冷啟動約 30-60 秒，follow 事件觸發時 server 可能還沒醒；另需確認 LINE Console 的 Webhook URL 正確且 Use webhook 已開啟、Auto-reply 已關閉
+13. **FullCalendar eventSources async + callback 不能混用**：`async function` 已回傳 Promise，不能同時呼叫 `successCallback`，FullCalendar 兩種都忽略；改成純 Promise（`return` 事件陣列）或純 callback（非 async function）
+14. **FullCalendar 月視圖 info.start 是格線邊緣非當月第一天**：月視圖 `info.start` 是最左上格（可能是上個月底），`info.end` 是最右下格後一天（可能是下個月初），需迴圈產生 start 到 end 之間所有月份一起撈
+15. **本地開發 CORS**：後端 CORS 只允許 Vercel 網址，本地開發需在 `vite.config.js` 設 `server.proxy` 把 `/api` 轉發到 Render，並把 `VITE_API_URL` 設為空字串讓 axios 用相對路徑
