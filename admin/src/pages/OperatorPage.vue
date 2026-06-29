@@ -157,10 +157,6 @@ function logout() {
   router.push('/operator/login')
 }
 
-function setFavicon(href) {
-  const link = document.querySelector("link[rel~='icon']")
-  if (link) link.href = href
-}
 onMounted(() => { fetchGyms(); setFavicon('/favicon-operator.svg') })
 onUnmounted(() => setFavicon('/favicon.svg'))
 </script>
