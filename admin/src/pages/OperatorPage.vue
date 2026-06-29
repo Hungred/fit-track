@@ -161,8 +161,8 @@ onMounted(fetchGyms)
           <p class="text-4xl font-bold text-green-500">{{ gyms.filter(g => g.status === 'active').length }}</p>
         </div>
         <div class="bg-white rounded-2xl shadow-sm p-5 text-center">
-          <p class="text-sm text-gray-400 mb-1">本月總出勤</p>
-          <p class="text-4xl font-bold text-purple-500">{{ gyms.reduce((s, g) => s + g.month_checkins, 0) }}</p>
+          <p class="text-sm text-gray-400 mb-1">平台總學員數</p>
+          <p class="text-4xl font-bold text-purple-500">{{ gyms.reduce((s, g) => s + g.member_count, 0) }}</p>
         </div>
       </div>
 

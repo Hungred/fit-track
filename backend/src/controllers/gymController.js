@@ -9,15 +9,10 @@ export async function listGyms(req, res) {
   if (error) return res.status(500).json({ error: error.message })
 
   // 補上各館學員數與本月出勤數
-  const today = new Date()
-  const monthStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`
-
   const result = await Promise.all(gyms.map(async (gym) => {
-    const [{ count: memberCount }, { count: checkinCount }] = await Promise.all([
-      supabase.from('members').select('id', { count: 'exact', head: true }).eq('gym_id', gym.id).eq('role', 'member'),
-      supabase.from('checkins').select('id', { count: 'exact', head: true }).eq('gym_id', gym.id).gte('checked_in_at', monthStart),
-    ])
-    return { ...gym, member_count: memberCount || 0, month_checkins: checkinCount || 0 }
+    const { count: memberCount } = await supabase
+      .from('members').select('id', { count: 'exact', head: true }).eq('gym_id', gym.id).eq('role', 'member')
+    return { ...gym, member_count: memberCount || 0 }
   }))
 
   res.json({ gyms: result })
