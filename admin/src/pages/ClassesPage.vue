@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -12,6 +12,7 @@ import dayjs from 'dayjs'
 
 const auth = useAuthStore()
 const calendarRef = ref(null)
+const eventsMap = new Map()
 const fetchedMonths = new Set()
 let fetchGeneration = 0
 const members = ref([])
@@ -122,6 +123,7 @@ const calendarOptions = ref({
   },
   buttonText: { today: '今天', month: '月' },
   eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+  events: [],
   dateClick: (info) => {
     if (!auth.hasPermission('classes:create')) return
     editingClass.value = null
@@ -156,14 +158,10 @@ async function fetchClasses(month) {
     const res = await classApi.list(month)
     if (gen !== fetchGeneration) return
     const cls = res.data.classes || []
-    const api = calendarRef.value?.getApi()
-    if (!api) { fetchedMonths.delete(month); return }
     cls.forEach(c => {
-      const existing = api.getEventById(c.id)
-      if (existing) existing.remove()
       const names = (c.enrollments || []).map(e => e.member?.name).filter(Boolean).join('、')
       const { bg, border } = classEventColor(c)
-      api.addEvent({
+      eventsMap.set(c.id, {
         id: c.id,
         title: names || c.title || '上課',
         start: c.start_at,
@@ -173,6 +171,7 @@ async function fetchClasses(month) {
         extendedProps: { classData: c },
       })
     })
+    calendarOptions.value.events = [...eventsMap.values()]
   } catch {
     fetchedMonths.delete(month)
   }
@@ -181,12 +180,17 @@ async function fetchClasses(month) {
 async function refreshAll() {
   fetchGeneration++
   fetchedMonths.clear()
+  eventsMap.clear()
+  calendarOptions.value.events = []
+
   const api = calendarRef.value?.getApi()
-  if (!api) return
-  api.removeAllEvents()
-  const view = api.view
-  const startMonth = dayjs(view.activeStart).format('YYYY-MM')
-  const endMonth = dayjs(view.activeEnd).subtract(1, 'day').format('YYYY-MM')
+  const startMonth = api
+    ? dayjs(api.view.activeStart).format('YYYY-MM')
+    : dayjs().format('YYYY-MM')
+  const endMonth = api
+    ? dayjs(api.view.activeEnd).subtract(1, 'day').format('YYYY-MM')
+    : startMonth
+
   await fetchClasses(startMonth)
   if (endMonth !== startMonth) await fetchClasses(endMonth)
 }
@@ -270,7 +274,6 @@ const statusColor = { pending: 'text-gray-400', confirmed: 'text-green-600', lea
 
 onMounted(async () => {
   await fetchMembers()
-  await nextTick()
   await refreshAll()
 })
 </script>
