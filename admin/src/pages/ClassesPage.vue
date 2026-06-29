@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -139,6 +139,13 @@ const calendarOptions = ref({
   },
 })
 
+function classEventColor(cls) {
+  const enrollments = cls.enrollments || []
+  if (!enrollments.length) return { bg: '#9ca3af', border: '#6b7280' }
+  if (enrollments.some(e => e.status === 'pending')) return { bg: '#f59e0b', border: '#d97706' }
+  return { bg: '#16a34a', border: '#15803d' }
+}
+
 async function fetchClasses(month) {
   if (fetchedMonths.has(month)) return
   fetchedMonths.add(month)
@@ -146,19 +153,21 @@ async function fetchClasses(month) {
   try {
     const res = await classApi.list(month)
     const cls = res.data.classes || []
+    await nextTick()
     const api = calendarRef.value?.getApi()
-    if (!api) return
+    if (!api) { fetchedMonths.delete(month); return }
     cls.forEach(c => {
       const existing = api.getEventById(c.id)
       if (existing) existing.remove()
       const names = (c.enrollments || []).map(e => e.member?.name).filter(Boolean).join('、')
+      const { bg, border } = classEventColor(c)
       api.addEvent({
         id: c.id,
         title: names || c.title || '上課',
         start: c.start_at,
         end: c.end_at || undefined,
-        backgroundColor: '#16a34a',
-        borderColor: '#15803d',
+        backgroundColor: bg,
+        borderColor: border,
         extendedProps: { classData: c },
       })
     })
