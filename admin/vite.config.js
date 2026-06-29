@@ -4,6 +4,14 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [vue(), tailwindcss()],
+  build: {
+    rollupOptions: {
+      input: {
+        main: './index.html',
+        operator: './operator.html',
+      },
+    },
+  },
   server: {
     proxy: {
       '/api': {

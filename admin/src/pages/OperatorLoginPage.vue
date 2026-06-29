@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { operatorApi } from '../api/index.js'
 import { ElMessage } from 'element-plus'
@@ -8,36 +8,6 @@ const router = useRouter()
 const password = ref('')
 const loading = ref(false)
 
-function setFavicon(svgHref, pngHref) {
-  document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(el => el.remove())
-  const ts = Date.now()
-  ;[
-    { rel: 'shortcut icon', type: 'image/png', href: pngHref + '?v=' + ts },
-    { rel: 'icon', type: 'image/png', href: pngHref + '?v=' + ts },
-    { rel: 'icon', type: 'image/svg+xml', href: svgHref + '?v=' + ts },
-  ].forEach(attrs => {
-    const el = document.createElement('link')
-    Object.assign(el, attrs)
-    document.head.appendChild(el)
-  })
-}
-
-const manifestLink = document.querySelector('link[rel="manifest"]')
-const touchIconLink = document.querySelector('link[rel="apple-touch-icon"]')
-const prevTitle = document.title
-
-onMounted(() => {
-  setFavicon('/favicon-operator.svg', '/icon-operator-192.png')
-  if (manifestLink) manifestLink.href = '/manifest-operator.json'
-  if (touchIconLink) touchIconLink.href = '/apple-touch-icon-operator.png'
-  document.title = 'Fit Track 營運後台'
-})
-onUnmounted(() => {
-  setFavicon('/favicon.svg', '/icon-192.png')
-  if (manifestLink) manifestLink.href = '/manifest.json'
-  if (touchIconLink) touchIconLink.href = '/apple-touch-icon.png'
-  document.title = prevTitle
-})
 
 async function handleLogin() {
   if (!password.value) { ElMessage.warning('請輸入密碼'); return }
