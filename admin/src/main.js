@@ -16,7 +16,11 @@ async function bootstrap() {
   app.use(router)
   app.mount('#app')
 
-  useAuthStore()
+  const auth = useAuthStore()
+  if (auth.gymId) {
+    const link = document.querySelector('link[rel="manifest"]')
+    if (link) link.href = `/api/manifest?gym=${auth.gymId}`
+  }
 }
 
 bootstrap()

@@ -22,11 +22,19 @@ const router = createRouter({
 
 const operatorPaths = ['/operator', '/operator/login']
 
+function updateManifest(gymId) {
+  const link = document.querySelector('link[rel="manifest"]')
+  if (link && gymId) link.href = `/api/manifest?gym=${gymId}`
+}
+
 router.beforeEach((to) => {
   if (operatorPaths.some(p => to.path.startsWith(p))) return
 
   const auth = useAuthStore()
-  if (to.query.gym) auth.setGym(to.query.gym)
+  if (to.query.gym) {
+    auth.setGym(to.query.gym)
+    updateManifest(to.query.gym)
+  }
 
   if (!auth.isAuth && to.path !== '/login') return '/login'
   if (auth.isAuth && to.path === '/login') return '/'
