@@ -163,6 +163,14 @@ onMounted(async () => {
       >
         📋 查看出勤記錄
       </button>
+
+      <!-- 課程頁面 -->
+      <button
+        @click="router.push('/classes')"
+        class="w-full mt-3 bg-white text-green-600 font-medium py-4 rounded-2xl shadow-sm border border-green-100 transition-all hover:bg-green-50"
+      >
+        📅 我的課程
+      </button>
     </div>
 
     <!-- 請假 Dialog -->
