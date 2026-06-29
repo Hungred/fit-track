@@ -2,9 +2,18 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi, setCoachHeader, setGymHeader } from '../api/index.js'
 
+function getGymIdCookie() {
+  const m = document.cookie.match(/(?:^|;\s*)gym_id=([^;]+)/)
+  return m ? m[1] : ''
+}
+
+function setGymIdCookie(id) {
+  document.cookie = `gym_id=${id}; path=/; max-age=31536000; SameSite=Strict`
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const storedUid = localStorage.getItem('coach_uid') || ''
-  const storedGymId = localStorage.getItem('gym_id') || ''
+  const storedGymId = localStorage.getItem('gym_id') || getGymIdCookie() || ''
   const storedPermissions = JSON.parse(localStorage.getItem('permissions') || '[]')
   const storedIsOwner = localStorage.getItem('is_owner') === 'true'
 
@@ -26,6 +35,7 @@ export const useAuthStore = defineStore('auth', () => {
     gymId.value = id
     setGymHeader(id)
     localStorage.setItem('gym_id', id)
+    setGymIdCookie(id)
   }
 
   async function login(username, password) {
