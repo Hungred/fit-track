@@ -177,6 +177,71 @@ export async function getMemberClasses(req, res) {
   res.json({ enrollments })
 }
 
+export async function updateMemberEnrollment(req, res) {
+  const { classId } = req.params
+  const { status } = req.body
+  const allowed = ['confirmed', 'leave', 'discuss']
+  if (!allowed.includes(status)) return res.status(400).json({ error: '狀態無效' })
+
+  const { data: existing } = await supabase
+    .from('class_enrollments')
+    .select('status')
+    .eq('class_id', classId)
+    .eq('member_id', req.member.id)
+    .eq('gym_id', req.gym.id)
+    .single()
+
+  if (existing?.status === 'attended') return res.status(400).json({ error: '您已完成打卡出席，無法再更改狀態' })
+
+  const { data: enrollment, error } = await supabase
+    .from('class_enrollments')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('class_id', classId)
+    .eq('member_id', req.member.id)
+    .eq('gym_id', req.gym.id)
+    .select()
+    .single()
+
+  if (error || !enrollment) return res.status(404).json({ error: '找不到報名記錄' })
+
+  if (status === 'discuss') {
+    const { data: cls } = await supabase
+      .from('classes')
+      .select('title, coach:coach_id(line_uid)')
+      .eq('id', classId)
+      .single()
+
+    if (cls?.coach?.line_uid && req.gym.line_channel_access_token) {
+      await pushMessage(
+        cls.coach.line_uid,
+        [{ type: 'text', text: `💬 ${req.member.name} 想跟你討論「${cls.title || '上課'}」課程內容，請主動聯繫。` }],
+        req.gym.line_channel_access_token
+      )
+    }
+  }
+
+  res.json({ enrollment })
+}
+
+export async function updateEnrollmentByCoach(req, res) {
+  const { id: classId, memberId } = req.params
+  const { status } = req.body
+  const allowed = ['pending', 'confirmed', 'leave', 'discuss']
+  if (!allowed.includes(status)) return res.status(400).json({ error: '狀態無效' })
+
+  const { data: enrollment, error } = await supabase
+    .from('class_enrollments')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('class_id', classId)
+    .eq('member_id', memberId)
+    .eq('gym_id', req.gym.id)
+    .select()
+    .single()
+
+  if (error || !enrollment) return res.status(404).json({ error: '找不到報名記錄' })
+  res.json({ enrollment })
+}
+
 export async function getClassIcal(req, res) {
   const { data: cls } = await supabase
     .from('classes')

@@ -78,6 +78,26 @@ export async function checkin(req, res) {
     }
   }
 
+  // 若有對應課程（前後 2 小時內），自動更新出席狀態
+  const now = new Date()
+  const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString()
+  const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString()
+  const { data: nearbyClasses } = await supabase
+    .from('classes')
+    .select('id')
+    .eq('gym_id', gymId)
+    .gte('start_at', twoHoursAgo)
+    .lte('start_at', twoHoursLater)
+  if (nearbyClasses?.length) {
+    await supabase
+      .from('class_enrollments')
+      .update({ status: 'attended', updated_at: now.toISOString() })
+      .eq('member_id', memberId)
+      .eq('gym_id', gymId)
+      .in('class_id', nearbyClasses.map(c => c.id))
+      .in('status', ['pending', 'confirmed'])
+  }
+
   res.json({ message: '簽到成功！', checkin, remaining_sessions: remaining, package_name: targetPackage.name })
 }
 

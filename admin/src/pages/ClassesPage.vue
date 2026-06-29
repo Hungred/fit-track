@@ -248,8 +248,20 @@ async function deleteClass(cls) {
   }
 }
 
-const statusLabel = { pending: '待確認', confirmed: '確認出席', leave: '請假', discuss: '討論中' }
-const statusColor = { pending: 'text-gray-400', confirmed: 'text-green-600', leave: 'text-orange-400', discuss: 'text-blue-500' }
+const statusLabel = { pending: '待確認', confirmed: '確認出席', leave: '請假', discuss: '討論中', attended: '已出席' }
+const statusColor = { pending: 'text-gray-400', confirmed: 'text-green-600', leave: 'text-orange-400', discuss: 'text-blue-500', attended: 'text-purple-600' }
+
+async function changeEnrollmentStatus(enrollment, newStatus) {
+  const oldStatus = enrollment.status
+  enrollment.status = newStatus
+  try {
+    await classApi.updateEnrollmentStatus(selectedClass.value.id, enrollment.member.id, newStatus)
+    ElMessage.success('狀態已更新')
+  } catch (err) {
+    enrollment.status = oldStatus
+    ElMessage.error(err.response?.data?.error || '操作失敗')
+  }
+}
 
 onMounted(async () => {
   await fetchMembers()
@@ -295,7 +307,14 @@ onMounted(async () => {
               class="flex items-center justify-between text-sm py-1.5 px-3 bg-gray-50 rounded-lg"
             >
               <span class="text-gray-700">{{ e.member?.name }}</span>
-              <span :class="statusColor[e.status]">{{ statusLabel[e.status] }}</span>
+              <el-select
+                :model-value="e.status"
+                size="small"
+                style="width: 110px"
+                @change="(val) => changeEnrollmentStatus(e, val)"
+              >
+                <el-option v-for="(label, val) in statusLabel" :key="val" :value="val" :label="label" />
+              </el-select>
             </div>
           </div>
           <p v-else class="text-sm text-gray-400">尚未邀請任何學員</p>

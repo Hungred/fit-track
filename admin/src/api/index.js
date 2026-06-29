@@ -59,6 +59,8 @@ export const classApi = {
   batchCreate: (classes) => api.post('/api/coach/classes/batch', { classes }),
   update: (id, data) => api.patch(`/api/coach/classes/${id}`, data),
   delete: (id) => api.delete(`/api/coach/classes/${id}`),
+  updateEnrollmentStatus: (classId, memberId, status) =>
+    api.patch(`/api/coach/classes/${classId}/enrollments/${memberId}`, { status }),
 }
 
 export const coachManageApi = {

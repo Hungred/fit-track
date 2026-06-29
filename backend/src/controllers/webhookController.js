@@ -54,6 +54,21 @@ async function handlePostback(event, client, gym) {
 
   if (!member) return
 
+  const { data: existing } = await supabase
+    .from('class_enrollments')
+    .select('status')
+    .eq('class_id', classId)
+    .eq('member_id', member.id)
+    .single()
+
+  if (existing && existing.status !== 'pending') {
+    const msg = existing.status === 'attended'
+      ? '您已完成打卡出席，無需再更改狀態。'
+      : '您已回覆過此課程邀請，如需更改請至 LIFF「我的課程」頁面操作。'
+    await client.replyMessage(event.replyToken, { type: 'text', text: msg })
+    return
+  }
+
   await supabase
     .from('class_enrollments')
     .update({ status: statusMap[action], updated_at: new Date().toISOString() })
