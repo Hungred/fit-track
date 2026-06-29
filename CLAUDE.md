@@ -190,6 +190,21 @@ GET    /api/classes/:id/ical            下載課程 iCal 檔案
 - **Operator 後台**（路由不受教練 auth guard 控制）：
   - `/operator/login`：營運方密碼登入（`localStorage` 存 `operator_password`）
   - `/operator`：管理所有健身房的 CRUD、停用/啟用、複製後台連結
+- **MPA（多頁面）架構**：`index.html`（健身房後台）和 `operator.html`（營運後台）是兩個獨立入口
+  - `vite.config.js` 的 `build.rollupOptions.input` 同時編譯兩個 HTML
+  - `vercel.json` rewrites：`/operator*` → `operator.html`，其他 → `index.html`
+  - 各自有獨立的 favicon、`<link rel="manifest">`、theme-color，不靠 JS 動態切換
+  - 健身房後台：綠色啞鈴圖示（`favicon.svg`、`manifest.json`、theme `#16a34a`）
+  - 營運後台：藍色筆記本圖示（`favicon-operator.svg`、`manifest-operator.json`、theme `#2563eb`）
+  - `manifest-operator.json` 有 `scope: "/operator"` 和 `id: "/operator"`，讓 iOS 識別為獨立 app
+- **PWA gym_id 持久化**：
+  - iOS 17+ 主畫面捷徑的 localStorage 與 Safari 隔離，但 **cookie 是共用的**
+  - `stores/auth.js` 的 `setGym()` 同時寫入 localStorage 和 cookie（`max-age=31536000`）
+  - store 初始化時 `localStorage.getItem('gym_id') || getCookieGymId()`，確保捷徑開啟也能讀到 gym_id
+  - `admin/api/manifest.js`：Vercel serverless function，回傳帶 `start_url: "/?gym=<id>"` 的動態 manifest
+  - router guard 偵測到 `?gym=` 時更新 `<link rel="manifest">` href 指向動態 manifest URL
+- **PWA safe area**：`viewport-fit=cover` 讓內容延伸到狀態列，fixed header 需加 `padding-top: env(safe-area-inset-top)`；`Layout.vue` 手機 header 和 main 都已加，`OperatorPage` / `OperatorLoginPage` header 也已加
+- **401 interceptor**：`api/index.js` 的 401 handler 只在非 `/operator*` 路徑才跳轉到健身房登入頁，避免 operator API 失敗時跑到錯誤頁
 
 ---
 
@@ -218,6 +233,8 @@ GET    /api/classes/:id/ical            下載課程 iCal 檔案
 - [x] LINE Flex Message 課程邀請、postback 確認/請假/討論、iCal 匯出
 - [x] LIFF 課程清單頁（學員查看即將上課的邀請與狀態）
 - [x] LIFF 圖文選單（立即簽到、我的堂數、出勤記錄、我的課程 四格）
+- [x] Admin RWD（平板/手機版，手機用漢堡選單 + 抽屜側欄）
+- [x] PWA 支援（加入主畫面捷徑，各自獨立圖示與 manifest）
 
 ---
 
@@ -273,3 +290,7 @@ GET    /api/classes/:id/ical            下載課程 iCal 檔案
 16. **LIFF init 競爭條件**：`store.init()` 若在 `onMounted` 呼叫，此時 `liff.init()` 尚未完成，`liff.getProfile()` 會報錯 → 改在 `main.js` 的 `bootstrap()` 函式裡 `await initLiff()` 之後才呼叫 `store.init()`
 17. **未綁定學員卡在主頁**：router `beforeEach` 在 `store.loading = true` 時放行，`store.init()` 完成後不會重新觸發 guard → `bootstrap()` 裡 `await store.init()` 之後主動 `router.push('/' 或 '/bind')`
 18. **QR token 打 API 時 auth 未就緒**：`HomePage.vue` 的 `onMounted` 早於 `bootstrap()` 的 `store.init()` 完成，帶 token 的 checkin API 此時 header 還沒設 → `onMounted` 裡先 `watch(() => store.loading, ...)` 等初始化完再送出
+19. **SPA 動態換 favicon 在 Safari 不可靠**：用 JS 刪除舊 `<link rel="icon">` 再插入新節點，Chrome 正常，Safari（macOS/iOS）不會更新 tab 圖示 → 改用 Vite MPA，兩個入口各自的 HTML 直接寫死不同 favicon，根本避免動態切換
+20. **iOS 17+ PWA localStorage 隔離**：主畫面捷徑（Web App 模式）的 localStorage 與 Safari 瀏覽器隔離，從 Safari 存的 gym_id 在捷徑裡讀不到 → 改用 cookie 存 gym_id（cookie 跨 Safari／Web App 共用）
+21. **iOS PWA manifest start_url 覆蓋當下 URL**：Safari 加入主畫面時會用 manifest 的 `start_url` 取代當下 URL（含 query string），所以 `?gym=<id>` 會被去掉 → 用 Vercel serverless function 產生動態 manifest，router guard 偵測到 gym 時即時更新 `<link rel="manifest">` href；但最終可靠解法仍是 cookie（manifest 更新有時序問題）
+22. **PWA standalone 狀態列重疊**：`viewport-fit=cover` 讓頁面延伸到 Dynamic Island / 瀏海下方，fixed header 若沒加 `padding-top: env(safe-area-inset-top)` 會與時間欄重疊
