@@ -9,21 +9,30 @@ const router = useRouter()
 const gyms = ref([])
 const loading = ref(true)
 
-// 進入營運後台時換 favicon、manifest、apple-touch-icon 與 title
+// iOS Safari 需要刪掉舊節點、插入新節點才會更新 tab favicon
+function setFavicon(href) {
+  document.querySelectorAll('link[rel="icon"]').forEach(el => el.remove())
+  const link = document.createElement('link')
+  link.rel = 'icon'
+  link.type = 'image/svg+xml'
+  link.href = href + '?v=' + Date.now()
+  document.head.appendChild(link)
+}
+
 const manifestLink = document.querySelector('link[rel="manifest"]')
 const touchIconLink = document.querySelector('link[rel="apple-touch-icon"]')
-const faviconLink = document.querySelector('link[rel="icon"]')
 const prevTitle = document.title
+
 onMounted(() => {
+  setFavicon('/favicon-operator.svg')
   if (manifestLink) manifestLink.href = '/manifest-operator.json'
   if (touchIconLink) touchIconLink.href = '/apple-touch-icon-operator.png'
-  if (faviconLink) faviconLink.href = '/favicon-operator.svg'
   document.title = 'Fit Track 營運後台'
 })
 onUnmounted(() => {
+  setFavicon('/favicon.svg')
   if (manifestLink) manifestLink.href = '/manifest.json'
   if (touchIconLink) touchIconLink.href = '/apple-touch-icon.png'
-  if (faviconLink) faviconLink.href = '/favicon.svg'
   document.title = prevTitle
 })
 const showForm = ref(false)
