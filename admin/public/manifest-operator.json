@@ -2,6 +2,8 @@
   "name": "Fit Track 營運後台",
   "short_name": "FT 營運",
   "description": "Fit Track 健身房管理平台",
+  "id": "/operator",
+  "scope": "/operator",
   "start_url": "/operator",
   "display": "standalone",
   "background_color": "#f9fafb",
