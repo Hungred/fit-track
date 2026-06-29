@@ -1,0 +1,18 @@
+{
+  "name": "Fit Track 營運後台",
+  "short_name": "FT 營運",
+  "description": "Fit Track 健身房管理平台",
+  "start_url": "/operator",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#16a34a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
