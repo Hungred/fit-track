@@ -66,15 +66,18 @@ const calendarOptions = ref({
 async function fetchClasses(month) {
   const res = await classApi.list(month || currentMonth.value)
   const cls = res.data.classes || []
-  events.value = cls.map(c => ({
-    id: c.id,
-    title: c.title || '上課',
-    start: c.start_at,
-    end: c.end_at || undefined,
-    backgroundColor: '#16a34a',
-    borderColor: '#15803d',
-    extendedProps: { classData: c },
-  }))
+  events.value = cls.map(c => {
+    const names = (c.enrollments || []).map(e => e.member?.name).filter(Boolean).join('、')
+    return {
+      id: c.id,
+      title: names || c.title || '上課',
+      start: c.start_at,
+      end: c.end_at || undefined,
+      backgroundColor: '#16a34a',
+      borderColor: '#15803d',
+      extendedProps: { classData: c },
+    }
+  })
   calendarOptions.value = { ...calendarOptions.value, events: events.value }
 }
 
