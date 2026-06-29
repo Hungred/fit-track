@@ -73,6 +73,10 @@ VITE_API_URL=https://fit-track-api-94nn.onrender.com
 | `checkins` | 簽到記錄，`method` = `button` / `qr` / `manual`，含 `gym_id` |
 | `qr_tokens` | QR Code token，掃完失效，含 `gym_id` |
 | `leaves` | 請假記錄，`member_id`、`leave_date`（DATE）、`reason`，含 `gym_id`，`(member_id, leave_date, gym_id)` 唯一鍵 |
+| `classes` | 課程主檔，含 `coach_id`、`start_at`、`end_at`（TIMESTAMPTZ）、`max_students`、`notes`、`gym_id` |
+| `class_enrollments` | 學員出席記錄，`status` = `pending` / `confirmed` / `leave` / `discuss`，`(class_id, member_id)` 唯一鍵 |
+
+**members 表新增欄位**（多教練支援）：`username`（TEXT UNIQUE per gym）、`coach_password`（TEXT，bcrypt hash）、`permissions`（JSONB array）、`is_owner`（BOOLEAN）
 
 **重要**：`checkins` 有兩個 FK 指向 `members`（`member_id` 和 `created_by`），Supabase join 時必須用明確的 FK 欄位名稱：
 ```js
@@ -114,7 +118,8 @@ POST   /webhook/:gymId                  LINE Webhook（每間健身房在 LINE C
 # 以下皆需 x-gym-id header
 
 # 教練後台登入
-POST   /api/auth/login                  密碼登入，回傳 coach line_uid
+POST   /api/auth/login                  帳號密碼登入，回傳 coach line_uid + permissions
+POST   /api/auth/change-password        變更自己的登入密碼（requireCoach）
 
 # 學員端（requireMember 驗 x-line-uid）
 POST   /api/members/bind                綁定學員（姓名、電話）
@@ -123,6 +128,7 @@ GET    /api/members/me/checkins         學員出勤記錄
 GET    /api/members/me/leaves           學員請假記錄
 POST   /api/members/me/leave            申請請假（body: leave_date, reason）
 DELETE /api/members/me/leave            取消請假（body: leave_date）
+GET    /api/members/me/classes          學員課程邀請清單（近 7 天 + 未來）
 
 # 簽到
 POST   /api/checkin                     學員簽到（requireMember，body: method, qr_token）
@@ -147,6 +153,20 @@ DELETE /api/coach/member-packages/:id         刪除學員方案
 
 PATCH  /api/coach/checkins/:id          更新簽到記錄
 DELETE /api/coach/checkins/:id          刪除簽到記錄
+
+GET    /api/coach/coaches               教練列表（requireCoach）
+POST   /api/coach/coaches               新增教練（requireOwner）
+PATCH  /api/coach/coaches/:id           編輯教練（requireOwner）
+DELETE /api/coach/coaches/:id           刪除教練（requireOwner，不可刪自己或 is_owner）
+
+GET    /api/coach/classes               課程列表（query: month）
+POST   /api/coach/classes               新增課程並推播 LINE 邀請
+GET    /api/coach/classes/:id           課程詳細（含出席狀態）
+PATCH  /api/coach/classes/:id           編輯課程
+DELETE /api/coach/classes/:id           刪除課程
+
+# 公開路由（不需認證）
+GET    /api/classes/:id/ical            下載課程 iCal 檔案
 ```
 
 ---
@@ -164,7 +184,9 @@ DELETE /api/coach/checkins/:id          刪除簽到記錄
 - 入口 URL 帶 `?gym=<gym_id>` 設定健身房，router guard 讀取並存 localStorage
 - `stores/auth.js`：store 建立時立刻從 `localStorage` 讀 `coach_uid` 和 `gym_id`，並同步設好 axios header
 - 登入方式：密碼（存在 `gyms` 表的 `admin_password`），不需要輸入 LINE UID
-- 路由：`/login`、`/`（dashboard）、`/members/:id`、`/packages`、`/qr`、`/report`
+- 路由：`/login`、`/`（dashboard）、`/members`、`/members/:id`、`/packages`、`/qr`、`/report`、`/classes`、`/coaches`
+- 側欄依 `permissions` 動態顯示；`is_owner` 才看得到「教練管理」
+- `stores/auth.js` 登入後存 `permissions`（JSONB array）與 `is_owner` 至 localStorage
 - **Operator 後台**（路由不受教練 auth guard 控制）：
   - `/operator/login`：營運方密碼登入（`localStorage` 存 `operator_password`）
   - `/operator`：管理所有健身房的 CRUD、停用/啟用、複製後台連結
@@ -187,30 +209,19 @@ DELETE /api/coach/checkins/:id          刪除簽到記錄
 - [x] 月報表統計（總出勤次數、出勤人數、學員明細、簽到方式分布）
 - [x] 請假功能（學員 LIFF 請假/取消、教練後台今日請假統計與標記）
 - [x] 多租戶架構（Operator 後台管理多間健身房，LINE 憑證 per-gym 存 DB）
+- [x] 營運後台統計：健身房總數、營運中數量、平台總學員數
+- [x] LINE 新學員歡迎訊息（follow 事件觸發 Flex Message，含功能說明與立即綁定按鈕）
+- [x] 教練變更自己的登入密碼（Admin 後台側欄底部「變更密碼」）
+- [x] 多教練帳號 + 細粒度權限管理（`members` 表加 username/coach_password/permissions/is_owner，20 個 permission key）
+- [x] 排課系統（FullCalendar 月曆、LINE Flex Message 課程邀請、postback 確認/請假/討論、iCal 匯出、LIFF 課程清單）
 
 ---
 
-## 待完成功能（依優先順序）
+## 待完成功能
 
-| 順序 | 功能 | 難度 | 說明 |
-|------|------|------|------|
-| 1 | 營運後台統計調整 | 小 | 第三格從「本月總出勤」改為「平台總學員數」 |
-| 2 | LINE 新學員引導訊息 | 小 | Webhook `follow` 事件回 Flex Message，含「立即綁定」按鈕 |
-| 3 | 健身房重置登入密碼 | 小 | Admin 後台加「變更密碼」，POST `/api/auth/change-password` 驗舊密碼後更新 `gyms.admin_password` |
-| 4 | 多教練 + 權限管理 | 中 | 見下方設計說明 |
-| 5 | 排課系統 | 大 | 見下方設計說明 |
+目前無待辦。
 
-### 順序 4：多教練 + 權限管理
-
-**DB 變動**：`members` 表加 `username`、`coach_password`（bcrypt）、`permissions`（JSONB）、`is_owner`（BOOLEAN）；移除 `gyms.admin_password`
-
-**後端變動**：`POST /api/auth/login` 改接 `{ username, password }` 比對 members 表；新增 `/api/coach/coaches` CRUD（`is_owner` 限定）；`requireCoach` middleware 帶 permissions；新增 `bcrypt` 套件
-
-**Admin 前端變動**：`LoginPage.vue` 加 username 欄位；`stores/auth.js` 加 `permissions`、`isOwner`；`Layout.vue` 側欄依權限顯示；router guard 加權限檢查；新增 `MembersPage.vue`（學員列表從 Dashboard 拆出）、`CoachesPage.vue`（主教練限定）
-
-**側欄結構**（調整後）：出勤總覽 / 學員管理 / 方案管理 / QR 簽到 / 月報表 / 教練管理
-
-**權限 Key 清單**：
+## 權限 Key 清單
 
 | 側欄 | Key | 說明 |
 |------|-----|------|
@@ -227,22 +238,14 @@ DELETE /api/coach/checkins/:id          刪除簽到記錄
 | | `packages:delete` | 刪除方案範本 |
 | QR 簽到 | `qr:generate` | 產生 QR Code |
 | 月報表 | `report:view` | 查看月報表 |
+| 排課管理 | `classes:view` | 查看課程月曆 |
+| | `classes:create` | 新增課程 |
+| | `classes:edit` | 編輯課程 |
+| | `classes:delete` | 刪除課程 |
 | 教練管理 | `coaches:list` | 查看教練列表 |
 | | `coaches:create` | 新增教練 |
 | | `coaches:edit` | 編輯教練（含重設密碼、改權限） |
 | | `coaches:delete` | 刪除教練 |
-
-### 順序 5：排課系統
-
-**DB**：新增 `classes`（課程主檔：教練、日期時間、班型、人數上限、gym_id）、`class_enrollments`（學員出席狀態：`pending` / `confirmed` / `leave` / `discuss`）
-
-**後端**：教練建立課程後推播 LINE Flex Message（三按鈕：確認/請假/跟教練討論）；Webhook 接收點按更新狀態；iCal 格式 API endpoint
-
-**Admin**：排課月曆（FullCalendar）、每堂課出席狀態
-
-**LIFF**：學員課程清單、加到行事曆（iCal / Google Calendar）
-
-**新增權限 Key**（順序 4 完成後加入）：`classes:view`、`classes:create`、`classes:edit`、`classes:delete`
 
 ---
 
@@ -256,3 +259,7 @@ DELETE /api/coach/checkins/:id          刪除簽到記錄
 6. **npm 裝錯目錄**：frontend 套件要在 liff/ 或 admin/ 裡裝，不是 backend/
 7. **多租戶 x-gym-id**：所有業務 API 請求都必須帶 `x-gym-id` header，前端從 URL param 讀取並存 localStorage
 8. **Webhook per-gym URL**：每間健身房在 LINE Developers Console 設自己的 Webhook URL（`/webhook/<gym_id>`），後端用該館的 `line_channel_secret` 驗簽名、`line_channel_access_token` 回覆
+9. **PostgreSQL 保留字 `username`**：欄位名稱 `username` 是保留字，SQL 中必須用雙引號 `"username"` 包起來
+10. **SQL 中 JSON 字串換行**：手動拼接 JSON 字串若含換行符會報 invalid input syntax for type json，改用 `jsonb_build_array()` 函式避免
+11. **簽到時區 bug**：server 用 UTC，`new Date().toISOString().slice(0,10)` 取到的是 UTC 日期，台灣 UTC+8 跨日時防重複簽到判斷會錯，時間範圍要用 `+08:00` 的起訖
+12. **LINE 歡迎訊息沒收到**：Render 冷啟動約 30-60 秒，follow 事件觸發時 server 可能還沒醒；另需確認 LINE Console 的 Webhook URL 正確且 Use webhook 已開啟、Auto-reply 已關閉

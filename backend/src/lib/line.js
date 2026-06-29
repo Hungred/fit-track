@@ -24,7 +24,7 @@ export function welcomeMessage(displayName, gymName, liffUrl) {
       body: {
         type: 'box',
         layout: 'vertical',
-        spacing: 'sm',
+        spacing: 'md',
         contents: [
           {
             type: 'text',
@@ -35,11 +35,31 @@ export function welcomeMessage(displayName, gymName, liffUrl) {
           },
           {
             type: 'text',
-            text: '請完成帳號綁定，即可使用簽到、查詢堂數等功能。',
+            text: '這裡是你的專屬健身管理帳號，綁定後即可使用：',
             size: 'sm',
             color: '#6b7280',
             wrap: true,
             margin: 'sm',
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            spacing: 'xs',
+            margin: 'md',
+            contents: [
+              { type: 'text', text: '✅  立即簽到', size: 'sm', color: '#374151' },
+              { type: 'text', text: '💪  查詢剩餘堂數', size: 'sm', color: '#374151', margin: 'xs' },
+              { type: 'text', text: '📋  查看出勤記錄', size: 'sm', color: '#374151', margin: 'xs' },
+              { type: 'text', text: '📅  查看課程安排', size: 'sm', color: '#374151', margin: 'xs' },
+            ],
+          },
+          {
+            type: 'text',
+            text: '請點下方按鈕完成綁定，開始使用 👇',
+            size: 'sm',
+            color: '#6b7280',
+            wrap: true,
+            margin: 'md',
           },
         ],
       },
