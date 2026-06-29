@@ -9,13 +9,16 @@ const password = ref('')
 const loading = ref(false)
 
 const manifestLink = document.querySelector('link[rel="manifest"]')
+const touchIconLink = document.querySelector('link[rel="apple-touch-icon"]')
 const prevTitle = document.title
 onMounted(() => {
   if (manifestLink) manifestLink.href = '/manifest-operator.json'
+  if (touchIconLink) touchIconLink.href = '/apple-touch-icon-operator.png'
   document.title = 'Fit Track 營運後台'
 })
 onUnmounted(() => {
   if (manifestLink) manifestLink.href = '/manifest.json'
+  if (touchIconLink) touchIconLink.href = '/apple-touch-icon.png'
   document.title = prevTitle
 })
 
