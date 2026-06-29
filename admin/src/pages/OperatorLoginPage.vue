@@ -8,12 +8,16 @@ const router = useRouter()
 const password = ref('')
 const loading = ref(false)
 
-function setFavicon(href) {
-  const link = document.querySelector("link[rel~='icon']")
-  if (link) link.href = href
-}
-onMounted(() => setFavicon('/favicon-operator.svg'))
-onUnmounted(() => setFavicon('/favicon.svg'))
+const manifestLink = document.querySelector('link[rel="manifest"]')
+const prevTitle = document.title
+onMounted(() => {
+  if (manifestLink) manifestLink.href = '/manifest-operator.json'
+  document.title = 'Fit Track 營運後台'
+})
+onUnmounted(() => {
+  if (manifestLink) manifestLink.href = '/manifest.json'
+  document.title = prevTitle
+})
 
 async function handleLogin() {
   if (!password.value) { ElMessage.warning('請輸入密碼'); return }

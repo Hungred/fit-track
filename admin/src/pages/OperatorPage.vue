@@ -9,10 +9,17 @@ const router = useRouter()
 const gyms = ref([])
 const loading = ref(true)
 
-// 進入營運後台時換成 operator manifest，讓「加入主畫面」開啟 /operator
+// 進入營運後台時換 manifest 與 title
 const manifestLink = document.querySelector('link[rel="manifest"]')
-onMounted(() => { if (manifestLink) manifestLink.href = '/manifest-operator.json' })
-onUnmounted(() => { if (manifestLink) manifestLink.href = '/manifest.json' })
+const prevTitle = document.title
+onMounted(() => {
+  if (manifestLink) manifestLink.href = '/manifest-operator.json'
+  document.title = 'Fit Track 營運後台'
+})
+onUnmounted(() => {
+  if (manifestLink) manifestLink.href = '/manifest.json'
+  document.title = prevTitle
+})
 const showForm = ref(false)
 const showConfirm = ref(false)
 const editingGym = ref(null)
