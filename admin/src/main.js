@@ -16,8 +16,7 @@ async function bootstrap() {
   app.use(router)
   app.mount('#app')
 
-  const auth = useAuthStore()
-  await auth.restore()
+  useAuthStore()
 }
 
 bootstrap()

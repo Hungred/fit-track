@@ -154,21 +154,20 @@ function buildEvent(c) {
   }
 }
 
-async function loadEvents(info, successCallback, failureCallback) {
-  try {
-    const startMonth = dayjs(info.start).format('YYYY-MM')
-    const endMonth = dayjs(info.end).subtract(1, 'day').format('YYYY-MM')
-    const months = startMonth === endMonth ? [startMonth] : [startMonth, endMonth]
-    const results = await Promise.all(months.map(m => classApi.list(m)))
-    const seen = new Set()
-    const events = results
-      .flatMap(r => r.data.classes || [])
-      .filter(c => !seen.has(c.id) && seen.add(c.id))
-      .map(buildEvent)
-    successCallback(events)
-  } catch {
-    failureCallback()
+async function loadEvents(info) {
+  const months = []
+  let curr = dayjs(info.start).startOf('month')
+  const last = dayjs(info.end).subtract(1, 'day').startOf('month')
+  while (!curr.isAfter(last)) {
+    months.push(curr.format('YYYY-MM'))
+    curr = curr.add(1, 'month')
   }
+  const results = await Promise.all(months.map(m => classApi.list(m)))
+  const seen = new Set()
+  return results
+    .flatMap(r => r.data.classes || [])
+    .filter(c => !seen.has(c.id) && seen.add(c.id))
+    .map(buildEvent)
 }
 
 function refreshAll() {
