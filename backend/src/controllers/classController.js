@@ -41,7 +41,7 @@ export async function createClass(req, res) {
     .insert({
       gym_id: req.gym.id,
       coach_id: req.member.id,
-      title,
+      title: title || '上課',
       start_at,
       end_at: end_at || null,
       max_students: max_students || null,
@@ -91,7 +91,7 @@ export async function batchCreateClasses(req, res) {
       .insert({
         gym_id: req.gym.id,
         coach_id: req.member.id,
-        title: title || null,
+        title: title || '上課',
         start_at,
         end_at: end_at || null,
         max_students: max_students || null,

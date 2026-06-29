@@ -50,6 +50,13 @@ function removeBatchItem(i) {
   batchItems.value.splice(i, 1)
 }
 
+function onStartTimeChange(item) {
+  if (!item.start_time) return
+  const [h, m] = item.start_time.split(':').map(Number)
+  const endH = (h + 1) % 24
+  item.end_time = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
 const previewGroups = computed(() => {
   const valid = batchItems.value.filter(i => i.date && i.start_time)
   const sorted = [...valid].sort((a, b) => `${a.date}${a.start_time}` < `${b.date}${b.start_time}` ? -1 : 1)
@@ -81,7 +88,7 @@ async function submitBatch() {
   submitting.value = true
   try {
     const res = await classApi.batchCreate(classes)
-    ElMessage.success(`已建立 ${res.data.created} 堂課程，通知已發送`)
+    ElMessage.success(`已建立 ${res.data.created} 堂課程並推播通知`)
     showForm.value = false
     batchStep.value = 1
     batchItems.value = [emptyItem()]
@@ -100,9 +107,20 @@ const calendarOptions = ref({
   headerToolbar: {
     left: 'prev,next today',
     center: 'title',
-    right: 'dayGridMonth,timeGridWeek',
+    right: 'dayGridMonth,myWeek',
   },
-  buttonText: { today: '今天', month: '月', week: '週' },
+  customButtons: {
+    myWeek: {
+      text: '週',
+      click: () => {
+        const api = calendarRef.value?.getApi()
+        if (!api) return
+        api.changeView('timeGridWeek')
+        api.today()
+      },
+    },
+  },
+  buttonText: { today: '今天', month: '月' },
   eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
   events: [],
   dateClick: (info) => {
@@ -139,7 +157,7 @@ async function fetchClasses(month) {
       extendedProps: { classData: c },
     }
   })
-  calendarOptions.value = { ...calendarOptions.value, events: events.value }
+  calendarOptions.value.events = events.value
 }
 
 async function fetchMembers() {
@@ -340,7 +358,7 @@ onMounted(async () => {
               </div>
               <div class="flex-1">
                 <label class="block text-xs text-gray-500 mb-1">開始 *</label>
-                <el-input v-model="item.start_time" type="time" size="small" />
+                <el-input v-model="item.start_time" type="time" size="small" @change="onStartTimeChange(item)" />
               </div>
               <div class="flex-1">
                 <label class="block text-xs text-gray-500 mb-1">結束</label>
