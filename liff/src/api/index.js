@@ -29,3 +29,7 @@ export const leaveApi = {
   requestLeave: (leave_date, reason) => api.post('/api/members/me/leave', { leave_date, reason }),
   cancelLeave: (leave_date) => api.delete('/api/members/me/leave', { data: { leave_date } }),
 }
+
+export const classApi = {
+  getMyClasses: () => api.get('/api/members/me/classes'),
+}

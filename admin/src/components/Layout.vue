@@ -20,6 +20,7 @@ const allNavItems = [
   { path: '/packages', label: '方案管理', icon: '📦', permission: 'packages:list' },
   { path: '/qr', label: 'QR Code 簽到', icon: '📷', permission: 'qr:generate' },
   { path: '/report', label: '月報表', icon: '📈', permission: 'report:view' },
+  { path: '/classes', label: '排課管理', icon: '📅', permission: 'classes:view' },
   { path: '/coaches', label: '教練管理', icon: '🏋️', permission: 'coaches:list' },
 ]
 

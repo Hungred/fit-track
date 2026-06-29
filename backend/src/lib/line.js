@@ -150,6 +150,61 @@ export function checkinSuccessMessage(memberName, remaining, packageName, checke
   ]
 }
 
+export function classInviteMessage(memberName, cls, gymName) {
+  const dateStr = new Date(cls.start_at).toLocaleString('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    month: 'numeric',
+    day: 'numeric',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+  return {
+    type: 'flex',
+    altText: `📅 課程邀請：${cls.title}`,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        backgroundColor: '#16a34a',
+        contents: [{ type: 'text', text: '📅 課程邀請', color: '#ffffff', weight: 'bold', size: 'md' }],
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          { type: 'text', text: `${memberName} 你好！`, weight: 'bold', size: 'md', color: '#1f2937' },
+          { type: 'text', text: `課程：${cls.title}`, size: 'sm', color: '#6b7280', margin: 'sm' },
+          { type: 'text', text: `時間：${dateStr}`, size: 'sm', color: '#6b7280', margin: 'xs' },
+          ...(cls.notes ? [{ type: 'text', text: `備註：${cls.notes}`, size: 'sm', color: '#6b7280', margin: 'xs', wrap: true }] : []),
+        ],
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          {
+            type: 'button', style: 'primary', color: '#16a34a',
+            action: { type: 'postback', label: '✅ 確認出席', data: `class_confirm_${cls.id}` },
+          },
+          {
+            type: 'button', style: 'secondary',
+            action: { type: 'postback', label: '🏖️ 請假', data: `class_leave_${cls.id}` },
+          },
+          {
+            type: 'button', style: 'secondary',
+            action: { type: 'postback', label: '💬 跟教練討論', data: `class_discuss_${cls.id}` },
+          },
+        ],
+      },
+    },
+  }
+}
+
 export function lowSessionMessage(memberName, remaining, packageName) {
   return [
     {

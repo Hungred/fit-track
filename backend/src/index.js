@@ -3,6 +3,7 @@ import express from 'express'
 import cors from 'cors'
 
 import { requireGym } from './middlewares/gym.js'
+import { getClassIcal } from './controllers/classController.js'
 import authRouter from './routes/auth.js'
 import webhookRouter from './routes/webhook.js'
 import memberRouter from './routes/members.js'
@@ -21,6 +22,7 @@ app.use(cors({
 app.use(express.json())
 
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'Fit Track API' }))
+app.get('/api/classes/:id/ical', getClassIcal)
 
 // 營運方路由（不需要 gym middleware）
 app.use('/api/operator', operatorRouter)

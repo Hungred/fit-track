@@ -16,4 +16,8 @@ export const ALL_PERMISSIONS = [
   'coaches:create',
   'coaches:edit',
   'coaches:delete',
+  'classes:view',
+  'classes:create',
+  'classes:edit',
+  'classes:delete',
 ]

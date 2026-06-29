@@ -52,6 +52,14 @@ export const coachApi = {
   getTodayLeaves: () => api.get('/api/coach/leaves'),
 }
 
+export const classApi = {
+  list: (month) => api.get('/api/coach/classes', { params: { month } }),
+  get: (id) => api.get(`/api/coach/classes/${id}`),
+  create: (data) => api.post('/api/coach/classes', data),
+  update: (id, data) => api.patch(`/api/coach/classes/${id}`, data),
+  delete: (id) => api.delete(`/api/coach/classes/${id}`),
+}
+
 export const coachManageApi = {
   list: () => api.get('/api/coach/coaches'),
   create: (data) => api.post('/api/coach/coaches', data),

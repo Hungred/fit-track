@@ -1,6 +1,6 @@
 import { Client, validateSignature } from '@line/bot-sdk'
 import supabase from '../lib/supabase.js'
-import { welcomeMessage } from '../lib/line.js'
+import { welcomeMessage, pushMessage } from '../lib/line.js'
 
 export async function handleWebhook(req, res) {
   const { gymId } = req.params
@@ -31,6 +31,52 @@ async function handleEvent(event, client, gym) {
     await handleFollow(event, client, gym)
   } else if (event.type === 'message' && event.message.type === 'text') {
     await handleTextMessage(event, client, gym)
+  } else if (event.type === 'postback') {
+    await handlePostback(event, client, gym)
+  }
+}
+
+async function handlePostback(event, client, gym) {
+  const data = event.postback.data
+  const lineUid = event.source.userId
+  const match = data.match(/^class_(confirm|leave|discuss)_(.+)$/)
+  if (!match) return
+
+  const [, action, classId] = match
+  const statusMap = { confirm: 'confirmed', leave: 'leave', discuss: 'discuss' }
+
+  const { data: member } = await supabase
+    .from('members')
+    .select('id, name')
+    .eq('line_uid', lineUid)
+    .eq('gym_id', gym.id)
+    .single()
+
+  if (!member) return
+
+  await supabase
+    .from('class_enrollments')
+    .update({ status: statusMap[action], updated_at: new Date().toISOString() })
+    .eq('class_id', classId)
+    .eq('member_id', member.id)
+
+  const labels = { confirm: '已確認出席 ✅', leave: '已登記請假 🏖️', discuss: '已通知教練，請等候聯繫 💬' }
+  await client.replyMessage(event.replyToken, { type: 'text', text: labels[action] })
+
+  if (action === 'discuss') {
+    const { data: cls } = await supabase
+      .from('classes')
+      .select('title, coach:coach_id(line_uid)')
+      .eq('id', classId)
+      .single()
+
+    if (cls?.coach?.line_uid) {
+      await pushMessage(
+        cls.coach.line_uid,
+        [{ type: 'text', text: `💬 ${member.name} 想跟你討論「${cls.title}」課程內容，請主動聯繫。` }],
+        gym.line_channel_access_token
+      )
+    }
   }
 }
 

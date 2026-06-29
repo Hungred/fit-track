@@ -4,6 +4,7 @@ import { updateCheckin, deleteCheckin } from '../controllers/checkinController.j
 import { getTodayLeaves } from '../controllers/leaveController.js'
 import { listPackageTemplates, createPackageTemplate, updatePackageTemplate, deletePackageTemplate, assignPackage, adjustSessions, updateMemberPackage, deleteMemberPackage } from '../controllers/packageController.js'
 import { listCoaches, createCoach, updateCoach, deleteCoach } from '../controllers/coachManageController.js'
+import { listClasses, getClass, createClass, updateClass, deleteClass } from '../controllers/classController.js'
 import { requireCoach, requireOwner } from '../middlewares/auth.js'
 
 const router = Router()
@@ -31,5 +32,11 @@ router.patch('/member-packages/:id', updateMemberPackage)
 router.delete('/member-packages/:id', deleteMemberPackage)
 router.patch('/checkins/:id', updateCheckin)
 router.delete('/checkins/:id', deleteCheckin)
+
+router.get('/classes', listClasses)
+router.post('/classes', createClass)
+router.get('/classes/:id', getClass)
+router.patch('/classes/:id', updateClass)
+router.delete('/classes/:id', deleteClass)
 
 export default router

@@ -36,6 +36,12 @@ const PERMISSION_GROUPS = [
   { label: '月報表', items: [
     { key: 'report:view', label: '查看月報表' },
   ]},
+  { label: '排課管理', items: [
+    { key: 'classes:view', label: '查看課程月曆' },
+    { key: 'classes:create', label: '新增課程' },
+    { key: 'classes:edit', label: '編輯課程' },
+    { key: 'classes:delete', label: '刪除課程' },
+  ]},
   { label: '教練管理', items: [
     { key: 'coaches:list', label: '查看教練列表' },
     { key: 'coaches:create', label: '新增教練' },

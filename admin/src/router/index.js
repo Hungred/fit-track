@@ -9,6 +9,7 @@ const routes = [
   { path: '/packages', component: () => import('../pages/PackagesPage.vue'), meta: { permission: 'packages:list' } },
   { path: '/qr', component: () => import('../pages/QRPage.vue'), meta: { permission: 'qr:generate' } },
   { path: '/report', component: () => import('../pages/ReportPage.vue'), meta: { permission: 'report:view' } },
+  { path: '/classes', component: () => import('../pages/ClassesPage.vue'), meta: { permission: 'classes:view' } },
   { path: '/coaches', component: () => import('../pages/CoachesPage.vue'), meta: { permission: 'coaches:list' } },
   { path: '/operator/login', component: () => import('../pages/OperatorLoginPage.vue') },
   { path: '/operator', component: () => import('../pages/OperatorPage.vue') },
