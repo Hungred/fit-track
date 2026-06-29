@@ -65,7 +65,7 @@ async function submitChangePwd() {
     <aside class="fixed left-0 top-0 h-full w-56 bg-white border-r border-gray-100 flex flex-col">
       <div class="p-5 border-b border-gray-100">
         <router-link to="/" class="block">
-          <h1 class="text-lg font-bold text-green-600">💪 Fit Track</h1>
+          <h1 class="text-lg font-bold text-green-600">🏋️ Fit Track</h1>
           <p class="text-xs text-gray-400 mt-0.5">教練後台</p>
         </router-link>
       </div>

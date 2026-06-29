@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { operatorApi } from '../api/index.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -130,7 +130,12 @@ function logout() {
   router.push('/operator/login')
 }
 
-onMounted(fetchGyms)
+function setFavicon(href) {
+  const link = document.querySelector("link[rel~='icon']")
+  if (link) link.href = href
+}
+onMounted(() => { fetchGyms(); setFavicon('/favicon-operator.svg') })
+onUnmounted(() => setFavicon('/favicon.svg'))
 </script>
 
 <template>
@@ -138,7 +143,7 @@ onMounted(fetchGyms)
     <!-- Header -->
     <div class="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
       <div>
-        <h1 class="text-lg font-bold text-blue-600">🏢 Fit Track 營運後台</h1>
+        <h1 class="text-lg font-bold text-blue-600">📓 Fit Track 營運後台</h1>
         <p class="text-xs text-gray-400">健身房管理</p>
       </div>
       <div class="flex gap-3">
