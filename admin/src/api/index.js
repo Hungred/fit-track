@@ -26,6 +26,7 @@ export function setGymHeader(gymId) {
 
 export const authApi = {
   login: (password) => api.post('/api/auth/login', { password }),
+  changePassword: (current_password, new_password) => api.post('/api/auth/change-password', { current_password, new_password }),
 }
 
 export const coachApi = {

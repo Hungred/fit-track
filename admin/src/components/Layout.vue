@@ -1,6 +1,9 @@
 <script setup>
+import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
+import { authApi } from '../api/index.js'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()
@@ -17,6 +20,36 @@ const navItems = [
   { path: '/qr', label: 'QR Code 簽到', icon: '📷' },
   { path: '/report', label: '月報表', icon: '📈' },
 ]
+
+const showChangePwd = ref(false)
+const pwdForm = ref({ current: '', next: '', confirm: '' })
+const pwdSubmitting = ref(false)
+
+function openChangePwd() {
+  pwdForm.value = { current: '', next: '', confirm: '' }
+  showChangePwd.value = true
+}
+
+async function submitChangePwd() {
+  if (!pwdForm.value.current || !pwdForm.value.next) {
+    ElMessage.warning('請填寫所有欄位')
+    return
+  }
+  if (pwdForm.value.next !== pwdForm.value.confirm) {
+    ElMessage.warning('新密碼與確認密碼不一致')
+    return
+  }
+  pwdSubmitting.value = true
+  try {
+    await authApi.changePassword(pwdForm.value.current, pwdForm.value.next)
+    ElMessage.success('密碼已更新')
+    showChangePwd.value = false
+  } catch (err) {
+    ElMessage.error(err.response?.data?.error || '更新失敗')
+  } finally {
+    pwdSubmitting.value = false
+  }
+}
 </script>
 
 <template>
@@ -43,7 +76,13 @@ const navItems = [
           {{ item.label }}
         </router-link>
       </nav>
-      <div class="p-3 border-t border-gray-100">
+      <div class="p-3 border-t border-gray-100 space-y-1">
+        <button
+          @click="openChangePwd"
+          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+        >
+          🔑 變更密碼
+        </button>
         <button
           @click="logout"
           class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-500 hover:bg-gray-50 transition-colors"
@@ -52,6 +91,30 @@ const navItems = [
         </button>
       </div>
     </aside>
+
+    <el-dialog v-model="showChangePwd" title="變更密碼" width="360px">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">目前密碼</label>
+          <el-input v-model="pwdForm.current" type="password" show-password placeholder="請輸入目前密碼" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">新密碼</label>
+          <el-input v-model="pwdForm.next" type="password" show-password placeholder="至少 6 個字元" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">確認新密碼</label>
+          <el-input v-model="pwdForm.confirm" type="password" show-password placeholder="再輸入一次新密碼" />
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showChangePwd = false">取消</el-button>
+        <el-button type="primary" :loading="pwdSubmitting" @click="submitChangePwd"
+          style="background:#16a34a;border-color:#16a34a">
+          確認更新
+        </el-button>
+      </template>
+    </el-dialog>
 
     <!-- Main content -->
     <main class="ml-56 p-6">
