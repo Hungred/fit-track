@@ -12,14 +12,13 @@ import dayjs from 'dayjs'
 
 const auth = useAuthStore()
 const calendarRef = ref(null)
-const events = ref([])
+const fetchedMonths = new Set()
 const members = ref([])
 const showForm = ref(false)
 const showDetail = ref(false)
 const editingClass = ref(null)
 const selectedClass = ref(null)
 const submitting = ref(false)
-const currentMonth = ref(dayjs().format('YYYY-MM'))
 
 // 編輯用（單筆）
 const emptyForm = () => ({
@@ -92,7 +91,7 @@ async function submitBatch() {
     showForm.value = false
     batchStep.value = 1
     batchItems.value = [emptyItem()]
-    await fetchClasses()
+    await refreshAll()
   } catch (err) {
     ElMessage.error(err.response?.data?.error || '操作失敗')
   } finally {
@@ -122,7 +121,6 @@ const calendarOptions = ref({
   },
   buttonText: { today: '今天', month: '月' },
   eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
-  events: [],
   dateClick: (info) => {
     if (!auth.hasPermission('classes:create')) return
     editingClass.value = null
@@ -134,30 +132,51 @@ const calendarOptions = ref({
     openDetail(info.event.extendedProps.classData)
   },
   datesSet: (info) => {
-    const month = dayjs(info.start).add(15, 'day').format('YYYY-MM')
-    if (month !== currentMonth.value) {
-      currentMonth.value = month
-      fetchClasses(month)
-    }
+    const startMonth = dayjs(info.start).format('YYYY-MM')
+    const endMonth = dayjs(info.end).subtract(1, 'day').format('YYYY-MM')
+    fetchClasses(startMonth)
+    if (endMonth !== startMonth) fetchClasses(endMonth)
   },
 })
 
 async function fetchClasses(month) {
-  const res = await classApi.list(month || currentMonth.value)
-  const cls = res.data.classes || []
-  events.value = cls.map(c => {
-    const names = (c.enrollments || []).map(e => e.member?.name).filter(Boolean).join('、')
-    return {
-      id: c.id,
-      title: names || c.title || '上課',
-      start: c.start_at,
-      end: c.end_at || undefined,
-      backgroundColor: '#16a34a',
-      borderColor: '#15803d',
-      extendedProps: { classData: c },
-    }
-  })
-  calendarOptions.value.events = events.value
+  if (fetchedMonths.has(month)) return
+  fetchedMonths.add(month)
+
+  try {
+    const res = await classApi.list(month)
+    const cls = res.data.classes || []
+    const api = calendarRef.value?.getApi()
+    if (!api) return
+    cls.forEach(c => {
+      const existing = api.getEventById(c.id)
+      if (existing) existing.remove()
+      const names = (c.enrollments || []).map(e => e.member?.name).filter(Boolean).join('、')
+      api.addEvent({
+        id: c.id,
+        title: names || c.title || '上課',
+        start: c.start_at,
+        end: c.end_at || undefined,
+        backgroundColor: '#16a34a',
+        borderColor: '#15803d',
+        extendedProps: { classData: c },
+      })
+    })
+  } catch {
+    fetchedMonths.delete(month)
+  }
+}
+
+async function refreshAll() {
+  fetchedMonths.clear()
+  const api = calendarRef.value?.getApi()
+  if (!api) return
+  api.removeAllEvents()
+  const view = api.view
+  const startMonth = dayjs(view.activeStart).format('YYYY-MM')
+  const endMonth = dayjs(view.activeEnd).subtract(1, 'day').format('YYYY-MM')
+  await fetchClasses(startMonth)
+  if (endMonth !== startMonth) await fetchClasses(endMonth)
 }
 
 async function fetchMembers() {
@@ -214,7 +233,7 @@ async function submitForm() {
       ElMessage.success('課程已建立，通知已發送')
     }
     showForm.value = false
-    await fetchClasses()
+    await refreshAll()
   } catch (err) {
     ElMessage.error(err.response?.data?.error || '操作失敗')
   } finally {
@@ -228,7 +247,7 @@ async function deleteClass(cls) {
     await classApi.delete(cls.id)
     ElMessage.success('已刪除')
     showDetail.value = false
-    await fetchClasses()
+    await refreshAll()
   } catch (err) {
     ElMessage.error(err.response?.data?.error || '刪除失敗')
   }
@@ -238,7 +257,7 @@ const statusLabel = { pending: '待確認', confirmed: '確認出席', leave: '�
 const statusColor = { pending: 'text-gray-400', confirmed: 'text-green-600', leave: 'text-orange-400', discuss: 'text-blue-500' }
 
 onMounted(async () => {
-  await Promise.all([fetchClasses(), fetchMembers()])
+  await fetchMembers()
 })
 </script>
 
