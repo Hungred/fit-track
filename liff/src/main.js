@@ -30,13 +30,13 @@ async function bootstrap() {
     await store.init()
     if (!store.initError) {
       const currentPath = window.location.pathname
-      const isKnownPath = ['/', '/bind', '/history', '/classes'].includes(currentPath)
+      const knownPaths = ['/', '/bind', '/history', '/classes']
+      const targetPath = knownPaths.includes(currentPath) ? currentPath : '/'
       if (!store.member) {
         await router.push('/bind')
-      } else if (!isKnownPath || currentPath === '/') {
-        await router.push('/')
+      } else {
+        await router.push(targetPath)
       }
-      // 有明確路徑（如 /classes）則讓 router 自己處理，不強制跳轉
     }
   } else {
     store.loading = false
