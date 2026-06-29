@@ -42,7 +42,7 @@ onMounted(fetchDashboard)
     </div>
 
     <!-- 統計卡 -->
-    <div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="grid grid-cols-3 gap-3 lg:gap-4 mb-6">
       <div class="bg-white rounded-xl p-4 shadow-sm">
         <p class="text-sm text-gray-400">總學員數</p>
         <p class="text-3xl font-bold text-gray-800 mt-1">{{ members.length }}</p>

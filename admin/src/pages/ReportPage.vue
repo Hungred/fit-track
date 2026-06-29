@@ -108,9 +108,9 @@ onMounted(fetchReport)
       </div>
 
       <!-- 月曆 + 明細 -->
-      <div class="grid grid-cols-5 gap-6">
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <!-- 月曆 -->
-        <div class="col-span-3 bg-white rounded-2xl shadow-sm p-5">
+        <div class="lg:col-span-3 bg-white rounded-2xl shadow-sm p-5">
           <div class="grid grid-cols-7 mb-2">
             <div v-for="w in weekdays" :key="w"
               class="text-center text-xs text-gray-400 font-medium py-1">
@@ -141,7 +141,7 @@ onMounted(fetchReport)
         </div>
 
         <!-- 出勤明細 -->
-        <div class="col-span-2 bg-white rounded-2xl shadow-sm p-5">
+        <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm p-5">
           <div v-if="!selectedDate"
             class="h-full flex flex-col items-center justify-center text-gray-300 py-12">
             <div class="text-4xl mb-3">👆</div>

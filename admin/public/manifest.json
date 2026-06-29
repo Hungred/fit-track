@@ -1,0 +1,18 @@
+{
+  "name": "Fit Track 教練後台",
+  "short_name": "Fit Track",
+  "description": "健身房簽到管理系統",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#16a34a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

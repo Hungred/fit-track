@@ -176,7 +176,7 @@ onMounted(() => { fetchData(); fetchPackages() })
 
     <div v-if="loading" class="text-center py-12 text-gray-400">載入中...</div>
 
-    <div v-else class="grid grid-cols-2 gap-6">
+    <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- 左欄：方案管理 -->
       <div>
         <div class="flex items-center justify-between mb-3">
