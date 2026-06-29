@@ -12,9 +12,6 @@ import dayjs from 'dayjs'
 
 const auth = useAuthStore()
 const calendarRef = ref(null)
-const eventsMap = new Map()
-const fetchedMonths = new Set()
-let fetchGeneration = 0
 const members = ref([])
 const showForm = ref(false)
 const showDetail = ref(false)
@@ -123,7 +120,7 @@ const calendarOptions = ref({
   },
   buttonText: { today: '今天', month: '月' },
   eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
-  events: [],
+  eventSources: [{ events: loadEvents }],
   dateClick: (info) => {
     if (!auth.hasPermission('classes:create')) return
     editingClass.value = null
@@ -134,12 +131,6 @@ const calendarOptions = ref({
   eventClick: (info) => {
     openDetail(info.event.extendedProps.classData)
   },
-  datesSet: (info) => {
-    const startMonth = dayjs(info.start).format('YYYY-MM')
-    const endMonth = dayjs(info.end).subtract(1, 'day').format('YYYY-MM')
-    fetchClasses(startMonth)
-    if (endMonth !== startMonth) fetchClasses(endMonth)
-  },
 })
 
 function classEventColor(cls) {
@@ -149,50 +140,39 @@ function classEventColor(cls) {
   return { bg: '#16a34a', border: '#15803d' }
 }
 
-async function fetchClasses(month) {
-  if (fetchedMonths.has(month)) return
-  fetchedMonths.add(month)
-  const gen = fetchGeneration
-
-  try {
-    const res = await classApi.list(month)
-    if (gen !== fetchGeneration) return
-    const cls = res.data.classes || []
-    cls.forEach(c => {
-      const names = (c.enrollments || []).map(e => e.member?.name).filter(Boolean).join('、')
-      const { bg, border } = classEventColor(c)
-      eventsMap.set(c.id, {
-        id: c.id,
-        title: names || c.title || '上課',
-        start: c.start_at,
-        end: c.end_at || undefined,
-        backgroundColor: bg,
-        borderColor: border,
-        extendedProps: { classData: c },
-      })
-    })
-    calendarOptions.value.events = [...eventsMap.values()]
-  } catch {
-    fetchedMonths.delete(month)
+function buildEvent(c) {
+  const names = (c.enrollments || []).map(e => e.member?.name).filter(Boolean).join('、')
+  const { bg, border } = classEventColor(c)
+  return {
+    id: c.id,
+    title: names || c.title || '上課',
+    start: c.start_at,
+    end: c.end_at || undefined,
+    backgroundColor: bg,
+    borderColor: border,
+    extendedProps: { classData: c },
   }
 }
 
-async function refreshAll() {
-  fetchGeneration++
-  fetchedMonths.clear()
-  eventsMap.clear()
-  calendarOptions.value.events = []
+async function loadEvents(info, successCallback, failureCallback) {
+  try {
+    const startMonth = dayjs(info.start).format('YYYY-MM')
+    const endMonth = dayjs(info.end).subtract(1, 'day').format('YYYY-MM')
+    const months = startMonth === endMonth ? [startMonth] : [startMonth, endMonth]
+    const results = await Promise.all(months.map(m => classApi.list(m)))
+    const seen = new Set()
+    const events = results
+      .flatMap(r => r.data.classes || [])
+      .filter(c => !seen.has(c.id) && seen.add(c.id))
+      .map(buildEvent)
+    successCallback(events)
+  } catch {
+    failureCallback()
+  }
+}
 
-  const api = calendarRef.value?.getApi()
-  const startMonth = api
-    ? dayjs(api.view.activeStart).format('YYYY-MM')
-    : dayjs().format('YYYY-MM')
-  const endMonth = api
-    ? dayjs(api.view.activeEnd).subtract(1, 'day').format('YYYY-MM')
-    : startMonth
-
-  await fetchClasses(startMonth)
-  if (endMonth !== startMonth) await fetchClasses(endMonth)
+function refreshAll() {
+  calendarRef.value?.getApi()?.refetchEvents()
 }
 
 async function fetchMembers() {
@@ -274,7 +254,6 @@ const statusColor = { pending: 'text-gray-400', confirmed: 'text-green-600', lea
 
 onMounted(async () => {
   await fetchMembers()
-  await refreshAll()
 })
 </script>
 
