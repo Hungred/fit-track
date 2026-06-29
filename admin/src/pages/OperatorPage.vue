@@ -9,14 +9,18 @@ const router = useRouter()
 const gyms = ref([])
 const loading = ref(true)
 
-// iOS Safari 需要刪掉舊節點、插入新節點才會更新 tab favicon
-function setFavicon(href) {
-  document.querySelectorAll('link[rel="icon"]').forEach(el => el.remove())
-  const link = document.createElement('link')
-  link.rel = 'icon'
-  link.type = 'image/svg+xml'
-  link.href = href + '?v=' + Date.now()
-  document.head.appendChild(link)
+function setFavicon(svgHref, pngHref) {
+  document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(el => el.remove())
+  const ts = Date.now()
+  ;[
+    { rel: 'shortcut icon', type: 'image/png', href: pngHref + '?v=' + ts },
+    { rel: 'icon', type: 'image/png', href: pngHref + '?v=' + ts },
+    { rel: 'icon', type: 'image/svg+xml', href: svgHref + '?v=' + ts },
+  ].forEach(attrs => {
+    const el = document.createElement('link')
+    Object.assign(el, attrs)
+    document.head.appendChild(el)
+  })
 }
 
 const manifestLink = document.querySelector('link[rel="manifest"]')
@@ -24,13 +28,13 @@ const touchIconLink = document.querySelector('link[rel="apple-touch-icon"]')
 const prevTitle = document.title
 
 onMounted(() => {
-  setFavicon('/favicon-operator.svg')
+  setFavicon('/favicon-operator.svg', '/icon-operator-192.png')
   if (manifestLink) manifestLink.href = '/manifest-operator.json'
   if (touchIconLink) touchIconLink.href = '/apple-touch-icon-operator.png'
   document.title = 'Fit Track 營運後台'
 })
 onUnmounted(() => {
-  setFavicon('/favicon.svg')
+  setFavicon('/favicon.svg', '/icon-192.png')
   if (manifestLink) manifestLink.href = '/manifest.json'
   if (touchIconLink) touchIconLink.href = '/apple-touch-icon.png'
   document.title = prevTitle
@@ -157,8 +161,7 @@ function logout() {
   router.push('/operator/login')
 }
 
-onMounted(() => { fetchGyms(); setFavicon('/favicon-operator.svg') })
-onUnmounted(() => setFavicon('/favicon.svg'))
+onMounted(() => { fetchGyms() })
 </script>
 
 <template>
