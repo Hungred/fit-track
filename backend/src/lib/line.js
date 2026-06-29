@@ -225,6 +225,67 @@ export function classInviteMessage(memberName, cls, gymName) {
   }
 }
 
+export function classStatusReplyMessage(action, cls) {
+  const headerMap = {
+    confirm: { text: '✅ 已確認出席', color: '#16a34a' },
+    leave:   { text: '🏖️ 已登記請假', color: '#ea580c' },
+    discuss: { text: '💬 已通知教練', color: '#2563eb' },
+  }
+  const header = headerMap[action]
+
+  const dateStr = new Date(cls.start_at).toLocaleString('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    month: 'numeric',
+    day: 'numeric',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+  const allButtons = [
+    { label: '✅ 確認出席',   data: `class_confirm_${cls.id}` },
+    { label: '🏖️ 請假',      data: `class_leave_${cls.id}` },
+    { label: '💬 跟教練討論', data: `class_discuss_${cls.id}` },
+  ]
+  const changeButtons = allButtons.filter(b => !b.data.includes(`_${action}_`))
+
+  return {
+    type: 'flex',
+    altText: header.text,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        backgroundColor: header.color,
+        contents: [{ type: 'text', text: header.text, color: '#ffffff', weight: 'bold', size: 'md' }],
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'xs',
+        contents: [
+          { type: 'text', text: `課程：${cls.title || '上課'}`, size: 'sm', color: '#374151' },
+          { type: 'text', text: `時間：${dateStr}`, size: 'sm', color: '#374151', margin: 'xs' },
+          ...(cls.coach?.name ? [{ type: 'text', text: `教練：${cls.coach.name}`, size: 'sm', color: '#374151', margin: 'xs' }] : []),
+          { type: 'text', text: '想更改出席狀態？', size: 'xs', color: '#9ca3af', margin: 'lg' },
+        ],
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: changeButtons.map(b => ({
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          action: { type: 'postback', label: b.label, data: b.data },
+        })),
+      },
+    },
+  }
+}
+
 export function lowSessionMessage(memberName, remaining, packageName) {
   return [
     {

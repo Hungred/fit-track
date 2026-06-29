@@ -42,6 +42,7 @@ const calendarOptions = ref({
     right: 'dayGridMonth,timeGridWeek',
   },
   buttonText: { today: '今天', month: '月', week: '週' },
+  eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
   events: [],
   dateClick: (info) => {
     if (!auth.hasPermission('classes:create')) return
@@ -67,7 +68,7 @@ async function fetchClasses(month) {
   const cls = res.data.classes || []
   events.value = cls.map(c => ({
     id: c.id,
-    title: c.title,
+    title: c.title || '上課',
     start: c.start_at,
     end: c.end_at || undefined,
     backgroundColor: '#16a34a',
@@ -105,8 +106,8 @@ function openEdit() {
 }
 
 async function submitForm() {
-  if (!form.value.title || !form.value.date || !form.value.start_time) {
-    ElMessage.warning('請填寫課程名稱與開始時間')
+  if (!form.value.date || !form.value.start_time) {
+    ElMessage.warning('請填寫開始時間')
     return
   }
   submitting.value = true

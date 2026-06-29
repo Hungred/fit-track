@@ -34,7 +34,7 @@ export async function getClass(req, res) {
 
 export async function createClass(req, res) {
   const { title, start_at, end_at, max_students, notes, member_ids } = req.body
-  if (!title || !start_at) return res.status(400).json({ error: '課程名稱與開始時間為必填' })
+  if (!start_at) return res.status(400).json({ error: '開始時間為必填' })
 
   const { data: cls, error } = await supabase
     .from('classes')

@@ -1,6 +1,6 @@
 import { Client, validateSignature } from '@line/bot-sdk'
 import supabase from '../lib/supabase.js'
-import { welcomeMessage, pushMessage } from '../lib/line.js'
+import { welcomeMessage, pushMessage, classStatusReplyMessage } from '../lib/line.js'
 
 export async function handleWebhook(req, res) {
   const { gymId } = req.params
@@ -60,23 +60,20 @@ async function handlePostback(event, client, gym) {
     .eq('class_id', classId)
     .eq('member_id', member.id)
 
-  const labels = { confirm: '已確認出席 ✅', leave: '已登記請假 🏖️', discuss: '已通知教練，請等候聯繫 💬' }
-  await client.replyMessage(event.replyToken, { type: 'text', text: labels[action] })
+  const { data: cls } = await supabase
+    .from('classes')
+    .select('id, title, start_at, coach:coach_id(name, line_uid)')
+    .eq('id', classId)
+    .single()
 
-  if (action === 'discuss') {
-    const { data: cls } = await supabase
-      .from('classes')
-      .select('title, coach:coach_id(line_uid)')
-      .eq('id', classId)
-      .single()
+  await client.replyMessage(event.replyToken, classStatusReplyMessage(action, cls || { id: classId }))
 
-    if (cls?.coach?.line_uid) {
-      await pushMessage(
-        cls.coach.line_uid,
-        [{ type: 'text', text: `💬 ${member.name} 想跟你討論「${cls.title}」課程內容，請主動聯繫。` }],
-        gym.line_channel_access_token
-      )
-    }
+  if (action === 'discuss' && cls?.coach?.line_uid) {
+    await pushMessage(
+      cls.coach.line_uid,
+      [{ type: 'text', text: `💬 ${member.name} 想跟你討論「${cls.title || '上課'}」課程內容，請主動聯繫。` }],
+      gym.line_channel_access_token
+    )
   }
 }
 
