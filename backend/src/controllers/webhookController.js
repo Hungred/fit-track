@@ -1,45 +1,51 @@
 import { Client, validateSignature } from '@line/bot-sdk'
 import supabase from '../lib/supabase.js'
-
-const lineClient = new Client({
-  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
-})
-
-export function verifySignature(req, res, next) {
-  const signature = req.headers['x-line-signature']
-  const body = JSON.stringify(req.body)
-
-  if (!validateSignature(body, process.env.LINE_CHANNEL_SECRET, signature)) {
-    return res.status(403).json({ error: '簽名驗證失敗' })
-  }
-  next()
-}
+import { welcomeMessage } from '../lib/line.js'
 
 export async function handleWebhook(req, res) {
+  const { gymId } = req.params
+
+  const { data: gym } = await supabase
+    .from('gyms')
+    .select('*')
+    .eq('id', gymId)
+    .eq('status', 'active')
+    .single()
+
+  if (!gym) return res.status(404).json({ error: '找不到此健身房' })
+
+  const signature = req.headers['x-line-signature']
+  if (!validateSignature(JSON.stringify(req.body), gym.line_channel_secret, signature)) {
+    return res.status(403).json({ error: '簽名驗證失敗' })
+  }
+
+  const client = new Client({ channelAccessToken: gym.line_channel_access_token })
   const events = req.body.events || []
-  await Promise.all(events.map(handleEvent))
+
+  await Promise.all(events.map(event => handleEvent(event, client, gym)))
   res.json({ ok: true })
 }
 
-async function handleEvent(event) {
+async function handleEvent(event, client, gym) {
   if (event.type === 'follow') {
-    await handleFollow(event)
+    await handleFollow(event, client, gym)
   } else if (event.type === 'message' && event.message.type === 'text') {
-    await handleTextMessage(event)
+    await handleTextMessage(event, client, gym)
   }
 }
 
-async function handleFollow(event) {
+async function handleFollow(event, client, gym) {
   const lineUid = event.source.userId
-  const profile = await lineClient.getProfile(lineUid)
+  const profile = await client.getProfile(lineUid)
 
-  await lineClient.replyMessage(event.replyToken, {
-    type: 'text',
-    text: `歡迎加入 Fit Track！👋\n\n你好 ${profile.displayName}，請點選下方選單完成身份綁定，就可以開始使用簽到功能囉！`,
-  })
+  const liffUrl = gym.liff_id
+    ? `https://liff.line.me/${gym.liff_id}?gym=${gym.id}`
+    : `${process.env.FRONTEND_URL}?gym=${gym.id}`
+
+  await client.replyMessage(event.replyToken, welcomeMessage(profile.displayName, gym.name, liffUrl))
 }
 
-async function handleTextMessage(event) {
+async function handleTextMessage(event, client, gym) {
   const text = event.message.text.trim()
   const lineUid = event.source.userId
 
@@ -48,10 +54,11 @@ async function handleTextMessage(event) {
       .from('members')
       .select('*')
       .eq('line_uid', lineUid)
+      .eq('gym_id', gym.id)
       .single()
 
     if (!member) {
-      await lineClient.replyMessage(event.replyToken, {
+      await client.replyMessage(event.replyToken, {
         type: 'text',
         text: '請先完成身份綁定喔！點選選單中的「綁定帳號」。',
       })
@@ -62,10 +69,11 @@ async function handleTextMessage(event) {
       .from('member_packages')
       .select('*, package:packages(name)')
       .eq('member_id', member.id)
+      .eq('gym_id', gym.id)
       .gt('remaining_sessions', 0)
 
     if (!packages?.length) {
-      await lineClient.replyMessage(event.replyToken, {
+      await client.replyMessage(event.replyToken, {
         type: 'text',
         text: `${member.name} 您好！\n\n目前沒有有效堂數，請聯絡教練購課。`,
       })
@@ -76,7 +84,7 @@ async function handleTextMessage(event) {
       `📦 ${p.package.name}：剩餘 ${p.remaining_sessions} 堂`
     ).join('\n')
 
-    await lineClient.replyMessage(event.replyToken, {
+    await client.replyMessage(event.replyToken, {
       type: 'text',
       text: `${member.name} 您好！\n\n目前有效方案：\n${info}`,
     })

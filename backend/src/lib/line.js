@@ -1,5 +1,68 @@
 import axios from 'axios'
 
+export function welcomeMessage(displayName, gymName, liffUrl) {
+  return {
+    type: 'flex',
+    altText: `歡迎加入 ${gymName}！`,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        backgroundColor: '#16a34a',
+        contents: [
+          {
+            type: 'text',
+            text: `💪 歡迎加入 ${gymName}`,
+            color: '#ffffff',
+            weight: 'bold',
+            size: 'md',
+            wrap: true,
+          },
+        ],
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          {
+            type: 'text',
+            text: `${displayName} 你好！`,
+            weight: 'bold',
+            size: 'md',
+            color: '#1f2937',
+          },
+          {
+            type: 'text',
+            text: '請完成帳號綁定，即可使用簽到、查詢堂數等功能。',
+            size: 'sm',
+            color: '#6b7280',
+            wrap: true,
+            margin: 'sm',
+          },
+        ],
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'button',
+            style: 'primary',
+            color: '#16a34a',
+            action: {
+              type: 'uri',
+              label: '立即綁定帳號',
+              uri: liffUrl,
+            },
+          },
+        ],
+      },
+    },
+  }
+}
+
 const LINE_API = 'https://api.line.me/v2/bot/message/push'
 
 export async function pushMessage(lineUid, messages, token = null) {
