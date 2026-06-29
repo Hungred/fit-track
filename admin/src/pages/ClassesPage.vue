@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -21,6 +21,7 @@ const selectedClass = ref(null)
 const submitting = ref(false)
 const currentMonth = ref(dayjs().format('YYYY-MM'))
 
+// 編輯用（單筆）
 const emptyForm = () => ({
   title: '',
   date: dayjs().format('YYYY-MM-DD'),
@@ -31,6 +32,66 @@ const emptyForm = () => ({
   member_ids: [],
 })
 const form = ref(emptyForm())
+
+// 批次新增
+const emptyItem = (date = dayjs().format('YYYY-MM-DD')) => ({
+  date, start_time: '09:00', end_time: '10:00', title: '', notes: '', member_ids: [],
+})
+const batchItems = ref([emptyItem()])
+const batchStep = ref(1) // 1=填寫 2=預覽
+
+function addBatchItem() {
+  const last = batchItems.value[batchItems.value.length - 1]
+  batchItems.value.push(emptyItem(last?.date))
+}
+
+function removeBatchItem(i) {
+  if (batchItems.value.length === 1) return
+  batchItems.value.splice(i, 1)
+}
+
+const previewGroups = computed(() => {
+  const valid = batchItems.value.filter(i => i.date && i.start_time)
+  const sorted = [...valid].sort((a, b) => `${a.date}${a.start_time}` < `${b.date}${b.start_time}` ? -1 : 1)
+  const groups = {}
+  sorted.forEach(item => {
+    if (!groups[item.date]) groups[item.date] = []
+    groups[item.date].push(item)
+  })
+  return groups
+})
+
+function memberNames(ids) {
+  return ids.map(id => members.value.find(m => m.id === id)?.name).filter(Boolean).join('、') || '（未邀請）'
+}
+
+async function submitBatch() {
+  const classes = batchItems.value
+    .filter(i => i.date && i.start_time)
+    .map(i => ({
+      title: i.title || null,
+      start_at: `${i.date}T${i.start_time}:00+08:00`,
+      end_at: i.end_time ? `${i.date}T${i.end_time}:00+08:00` : null,
+      notes: i.notes || null,
+      member_ids: i.member_ids,
+    }))
+
+  if (!classes.length) { ElMessage.warning('請至少填寫一筆課程'); return }
+
+  submitting.value = true
+  try {
+    const res = await classApi.batchCreate(classes)
+    ElMessage.success(`已建立 ${res.data.created} 堂課程，通知已發送`)
+    showForm.value = false
+    batchStep.value = 1
+    batchItems.value = [emptyItem()]
+    await fetchClasses()
+  } catch (err) {
+    ElMessage.error(err.response?.data?.error || '操作失敗')
+  } finally {
+    submitting.value = false
+  }
+}
 
 const calendarOptions = ref({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
@@ -46,9 +107,9 @@ const calendarOptions = ref({
   events: [],
   dateClick: (info) => {
     if (!auth.hasPermission('classes:create')) return
-    form.value = emptyForm()
-    form.value.date = info.dateStr
     editingClass.value = null
+    batchItems.value = [emptyItem(info.dateStr)]
+    batchStep.value = 1
     showForm.value = true
   },
   eventClick: (info) => {
@@ -170,7 +231,7 @@ onMounted(async () => {
       <el-button
         v-if="auth.hasPermission('classes:create')"
         type="primary"
-        @click="() => { form = emptyForm(); editingClass = null; showForm = true }"
+        @click="() => { editingClass = null; batchItems = [emptyItem()]; batchStep = 1; showForm = true }"
         style="background:#16a34a;border-color:#16a34a"
       >
         ＋ 新增課程
@@ -231,11 +292,16 @@ onMounted(async () => {
       </template>
     </el-dialog>
 
-    <!-- 新增 / 編輯 Dialog -->
-    <el-dialog v-model="showForm" :title="editingClass ? '編輯課程' : '新增課程'" width="480px">
-      <div class="space-y-4">
+    <!-- 新增（批次）/ 編輯 Dialog -->
+    <el-dialog
+      v-model="showForm"
+      :title="editingClass ? '編輯課程' : (batchStep === 1 ? '新增課程' : '確認課程內容')"
+      :width="editingClass ? '480px' : '680px'"
+    >
+      <!-- 編輯模式（單筆） -->
+      <div v-if="editingClass" class="space-y-4">
         <div>
-          <label class="block text-sm text-gray-600 mb-1">課程名稱 *</label>
+          <label class="block text-sm text-gray-600 mb-1">課程名稱（選填）</label>
           <el-input v-model="form.title" placeholder="例如：週一早班" />
         </div>
         <div class="grid grid-cols-3 gap-3">
@@ -253,26 +319,102 @@ onMounted(async () => {
           </div>
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">人數上限（選填）</label>
-          <el-input v-model="form.max_students" type="number" min="1" placeholder="不填表示無限制" />
-        </div>
-        <div>
           <label class="block text-sm text-gray-600 mb-1">備註（選填）</label>
           <el-input v-model="form.notes" type="textarea" :rows="2" />
         </div>
-        <div v-if="!editingClass">
-          <label class="block text-sm text-gray-600 mb-1">邀請學員（送出後會傳 LINE 通知）</label>
-          <el-select v-model="form.member_ids" multiple class="w-full" placeholder="選擇要邀請的學員">
-            <el-option v-for="m in members" :key="m.id" :label="m.name" :value="m.id" />
-          </el-select>
+      </div>
+
+      <!-- 新增模式（批次） -->
+      <div v-else>
+        <!-- Step 1: 填寫 -->
+        <div v-if="batchStep === 1" class="space-y-3">
+          <div
+            v-for="(item, i) in batchItems"
+            :key="i"
+            class="border border-gray-100 rounded-xl p-4 space-y-3 relative"
+          >
+            <div class="flex items-center gap-3">
+              <div class="flex-1">
+                <label class="block text-xs text-gray-500 mb-1">日期 *</label>
+                <el-input v-model="item.date" type="date" size="small" />
+              </div>
+              <div class="flex-1">
+                <label class="block text-xs text-gray-500 mb-1">開始 *</label>
+                <el-input v-model="item.start_time" type="time" size="small" />
+              </div>
+              <div class="flex-1">
+                <label class="block text-xs text-gray-500 mb-1">結束</label>
+                <el-input v-model="item.end_time" type="time" size="small" />
+              </div>
+              <button
+                v-if="batchItems.length > 1"
+                @click="removeBatchItem(i)"
+                class="mt-4 text-gray-400 hover:text-red-400 text-lg leading-none"
+              >×</button>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">課程名稱（選填）</label>
+                <el-input v-model="item.title" placeholder="例如：早班" size="small" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">備註（選填）</label>
+                <el-input v-model="item.notes" placeholder="" size="small" />
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">邀請學員</label>
+              <el-select v-model="item.member_ids" multiple size="small" class="w-full" placeholder="選擇學員（送出後推 LINE）">
+                <el-option v-for="m in members" :key="m.id" :label="m.name" :value="m.id" />
+              </el-select>
+            </div>
+          </div>
+
+          <button
+            @click="addBatchItem"
+            class="w-full py-2.5 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-green-300 hover:text-green-500 transition-colors"
+          >
+            ＋ 新增時段
+          </button>
+        </div>
+
+        <!-- Step 2: 預覽 -->
+        <div v-else class="space-y-4">
+          <p class="text-sm text-gray-500">確認以下課程內容，送出後將推播 LINE 通知給邀請的學員。</p>
+          <div v-for="(items, date) in previewGroups" :key="date" class="space-y-2">
+            <p class="text-sm font-semibold text-gray-700">
+              {{ dayjs(date).format('MM/DD (dd)') }}
+            </p>
+            <div
+              v-for="(item, i) in items"
+              :key="i"
+              class="bg-gray-50 rounded-xl px-4 py-3 text-sm space-y-1"
+            >
+              <div class="flex items-center gap-2 text-gray-700">
+                <span class="font-medium">{{ item.start_time }}{{ item.end_time ? `–${item.end_time}` : '' }}</span>
+                <span v-if="item.title" class="text-gray-500">{{ item.title }}</span>
+              </div>
+              <div class="text-xs text-green-600">👥 {{ memberNames(item.member_ids) }}</div>
+              <div v-if="item.notes" class="text-xs text-gray-400">{{ item.notes }}</div>
+            </div>
+          </div>
         </div>
       </div>
+
       <template #footer>
         <el-button @click="showForm = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitForm"
-          style="background:#16a34a;border-color:#16a34a">
-          {{ editingClass ? '更新' : '建立並通知' }}
-        </el-button>
+        <!-- 編輯模式 -->
+        <el-button v-if="editingClass" type="primary" :loading="submitting" @click="submitForm"
+          style="background:#16a34a;border-color:#16a34a">更新</el-button>
+        <!-- 新增 step 1 -->
+        <el-button v-else-if="batchStep === 1" type="primary" @click="batchStep = 2"
+          style="background:#16a34a;border-color:#16a34a">預覽確認 →</el-button>
+        <!-- 新增 step 2 -->
+        <template v-else>
+          <el-button @click="batchStep = 1">← 返回修改</el-button>
+          <el-button type="primary" :loading="submitting" @click="submitBatch"
+            style="background:#16a34a;border-color:#16a34a">確認送出</el-button>
+        </template>
       </template>
     </el-dialog>
   </Layout>

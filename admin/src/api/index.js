@@ -56,6 +56,7 @@ export const classApi = {
   list: (month) => api.get('/api/coach/classes', { params: { month } }),
   get: (id) => api.get(`/api/coach/classes/${id}`),
   create: (data) => api.post('/api/coach/classes', data),
+  batchCreate: (classes) => api.post('/api/coach/classes/batch', { classes }),
   update: (id, data) => api.patch(`/api/coach/classes/${id}`, data),
   delete: (id) => api.delete(`/api/coach/classes/${id}`),
 }

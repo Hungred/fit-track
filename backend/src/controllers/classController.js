@@ -77,6 +77,57 @@ export async function createClass(req, res) {
   res.json({ class: cls })
 }
 
+export async function batchCreateClasses(req, res) {
+  const { classes } = req.body
+  if (!classes?.length) return res.status(400).json({ error: '請提供至少一筆課程' })
+
+  const results = []
+  for (const cls of classes) {
+    const { title, start_at, end_at, max_students, notes, member_ids } = cls
+    if (!start_at) continue
+
+    const { data: created, error } = await supabase
+      .from('classes')
+      .insert({
+        gym_id: req.gym.id,
+        coach_id: req.member.id,
+        title: title || null,
+        start_at,
+        end_at: end_at || null,
+        max_students: max_students || null,
+        notes: notes || null,
+      })
+      .select()
+      .single()
+
+    if (error || !created) continue
+    results.push(created)
+
+    if (member_ids?.length) {
+      const { data: members } = await supabase
+        .from('members')
+        .select('id, name, line_uid')
+        .in('id', member_ids)
+        .eq('gym_id', req.gym.id)
+        .eq('role', 'member')
+
+      if (members?.length) {
+        await supabase.from('class_enrollments').insert(
+          members.map(m => ({ class_id: created.id, member_id: m.id, gym_id: req.gym.id }))
+        )
+        const accessToken = req.gym.line_channel_access_token
+        if (accessToken) {
+          await Promise.allSettled(
+            members.map(m => pushMessage(m.line_uid, [classInviteMessage(m.name, created, req.gym.name)], accessToken))
+          )
+        }
+      }
+    }
+  }
+
+  res.json({ created: results.length, classes: results })
+}
+
 export async function updateClass(req, res) {
   const { title, start_at, end_at, max_students, notes } = req.body
   const updates = {}
