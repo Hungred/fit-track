@@ -33,18 +33,6 @@ export async function checkin(req, res) {
 
   const targetPackage = packages[0]
 
-  const today = new Date().toISOString().slice(0, 10)
-  const { data: existing } = await supabase
-    .from('checkins')
-    .select('id')
-    .eq('member_id', memberId)
-    .eq('gym_id', gymId)
-    .gte('checked_in_at', `${today}T00:00:00`)
-    .lte('checked_in_at', `${today}T23:59:59`)
-    .single()
-
-  if (existing) return res.status(400).json({ error: '今天已經簽到過了' })
-
   const { data: checkin, error: checkinError } = await supabase
     .from('checkins')
     .insert({
