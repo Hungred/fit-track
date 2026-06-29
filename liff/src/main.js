@@ -29,7 +29,14 @@ async function bootstrap() {
     store.setGym(gymId)
     await store.init()
     if (!store.initError) {
-      await router.push(store.member ? '/' : '/bind')
+      const currentPath = window.location.pathname
+      const isKnownPath = ['/', '/bind', '/history', '/classes'].includes(currentPath)
+      if (!store.member) {
+        await router.push('/bind')
+      } else if (!isKnownPath || currentPath === '/') {
+        await router.push('/')
+      }
+      // 有明確路徑（如 /classes）則讓 router 自己處理，不強制跳轉
     }
   } else {
     store.loading = false
