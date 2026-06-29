@@ -13,6 +13,7 @@ import dayjs from 'dayjs'
 const auth = useAuthStore()
 const calendarRef = ref(null)
 const fetchedMonths = new Set()
+let fetchGeneration = 0
 const members = ref([])
 const showForm = ref(false)
 const showDetail = ref(false)
@@ -149,11 +150,12 @@ function classEventColor(cls) {
 async function fetchClasses(month) {
   if (fetchedMonths.has(month)) return
   fetchedMonths.add(month)
+  const gen = fetchGeneration
 
   try {
     const res = await classApi.list(month)
+    if (gen !== fetchGeneration) return
     const cls = res.data.classes || []
-    await nextTick()
     const api = calendarRef.value?.getApi()
     if (!api) { fetchedMonths.delete(month); return }
     cls.forEach(c => {
@@ -177,6 +179,7 @@ async function fetchClasses(month) {
 }
 
 async function refreshAll() {
+  fetchGeneration++
   fetchedMonths.clear()
   const api = calendarRef.value?.getApi()
   if (!api) return
@@ -267,6 +270,8 @@ const statusColor = { pending: 'text-gray-400', confirmed: 'text-green-600', lea
 
 onMounted(async () => {
   await fetchMembers()
+  await nextTick()
+  await refreshAll()
 })
 </script>
 
