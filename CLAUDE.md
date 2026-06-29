@@ -47,9 +47,8 @@ PORT=3000
 ### liff/.env
 ```
 VITE_API_URL=https://fit-track-api-94nn.onrender.com
+VITE_LIFF_ID=2010531115-c2Psq9el
 ```
-
-> `VITE_LIFF_ID` 已移除，LIFF ID 改由後端從 gyms 表讀取，或在 LIFF 初始化時從 URL param 帶入
 
 ### admin/.env
 ```
@@ -271,3 +270,6 @@ GET    /api/classes/:id/ical            下載課程 iCal 檔案
 13. **FullCalendar eventSources async + callback 不能混用**：`async function` 已回傳 Promise，不能同時呼叫 `successCallback`，FullCalendar 兩種都忽略；改成純 Promise（`return` 事件陣列）或純 callback（非 async function）
 14. **FullCalendar 月視圖 info.start 是格線邊緣非當月第一天**：月視圖 `info.start` 是最左上格（可能是上個月底），`info.end` 是最右下格後一天（可能是下個月初），需迴圈產生 start 到 end 之間所有月份一起撈
 15. **本地開發 CORS**：後端 CORS 只允許 Vercel 網址，本地開發需在 `vite.config.js` 設 `server.proxy` 把 `/api` 轉發到 Render，並把 `VITE_API_URL` 設為空字串讓 axios 用相對路徑
+16. **LIFF init 競爭條件**：`store.init()` 若在 `onMounted` 呼叫，此時 `liff.init()` 尚未完成，`liff.getProfile()` 會報錯 → 改在 `main.js` 的 `bootstrap()` 函式裡 `await initLiff()` 之後才呼叫 `store.init()`
+17. **未綁定學員卡在主頁**：router `beforeEach` 在 `store.loading = true` 時放行，`store.init()` 完成後不會重新觸發 guard → `bootstrap()` 裡 `await store.init()` 之後主動 `router.push('/' 或 '/bind')`
+18. **QR token 打 API 時 auth 未就緒**：`HomePage.vue` 的 `onMounted` 早於 `bootstrap()` 的 `store.init()` 完成，帶 token 的 checkin API 此時 header 還沒設 → `onMounted` 裡先 `watch(() => store.loading, ...)` 等初始化完再送出
