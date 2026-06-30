@@ -239,7 +239,7 @@ GET    /api/classes/:id/ical            下載課程 iCal 檔案
 - [x] LINE 按鈕重複點擊防護：已回覆過（非 pending）時回覆提示訊息，attended 顯示「已完成打卡」
 - [x] Admin 課程詳情：教練可用下拉選單直接修改學員出席狀態
 - [x] LIFF 圖文選單（立即簽到、我的堂數、出勤記錄、我的課程 四格）
-- [x] Admin RWD（平板/手機版，手機用漢堡選單 + 抽屜側欄；學員/教練管理 Table 改手機卡片；所有 Dialog 改響應式寬度；方案管理 Grid 改響應式欄數；月報表統計卡字型縮放；FullCalendar 手機 toolbar 縮減）
+- [x] Admin RWD（平板/手機版，手機用漢堡選單 + 抽屜側欄；學員/教練管理 Table 改手機卡片；所有 Dialog 改響應式寬度 `min(Xpx, 92vw)`；方案管理 Grid 改 `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`；月報表統計卡字型 `text-2xl lg:text-4xl`；排課管理手機改 `listMonth` 清單視圖，桌面保持月曆）
 - [x] PWA 支援（加入主畫面捷徑，各自獨立圖示與 manifest）
 
 ---
