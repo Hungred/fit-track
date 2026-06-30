@@ -217,15 +217,15 @@ onMounted(() => { fetchData(); fetchPackages() })
           <div
             v-for="c in checkins.slice(0, 30)"
             :key="c.id"
-            class="flex items-center justify-between px-4 py-3 border-b border-gray-50 last:border-0"
+            class="flex items-center justify-between px-4 py-3 border-b border-gray-50 last:border-0 gap-2"
           >
-            <div>
+            <div class="min-w-0">
               <p class="text-sm font-medium text-gray-800">
                 {{ dayjs(c.checked_in_at).format('MM/DD (ddd) HH:mm') }}
               </p>
               <p class="text-xs text-gray-400">{{ c.member_package?.package?.name }}</p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-shrink-0">
               <span class="text-xs px-2 py-0.5 rounded-full"
                 :class="c.method === 'manual' ? 'bg-yellow-50 text-yellow-600' : 'bg-green-50 text-green-600'">
                 {{ c.method === 'manual' ? '補登' : c.method === 'qr' ? 'QR' : '按鈕' }}
@@ -239,7 +239,7 @@ onMounted(() => { fetchData(); fetchPackages() })
     </div>
 
     <!-- 指派方案 Dialog -->
-    <el-dialog v-model="showAssign" title="指派堂數方案" width="400px">
+    <el-dialog v-model="showAssign" title="指派堂數方案" width="min(400px, 92vw)">
       <div class="space-y-4">
         <div>
           <label class="block text-sm text-gray-600 mb-1">選擇方案</label>
@@ -260,7 +260,7 @@ onMounted(() => { fetchData(); fetchPackages() })
     </el-dialog>
 
     <!-- 編輯方案 Dialog -->
-    <el-dialog v-model="showEditPkg" title="編輯方案" width="400px">
+    <el-dialog v-model="showEditPkg" title="編輯方案" width="min(400px, 92vw)">
       <div class="space-y-4">
         <div>
           <label class="block text-sm text-gray-600 mb-1">方案</label>
@@ -285,7 +285,7 @@ onMounted(() => { fetchData(); fetchPackages() })
     </el-dialog>
 
     <!-- 編輯簽到 Dialog -->
-    <el-dialog v-model="showEditCheckin" title="編輯簽到記錄" width="400px">
+    <el-dialog v-model="showEditCheckin" title="編輯簽到記錄" width="min(400px, 92vw)">
       <div class="space-y-4">
         <div>
           <label class="block text-sm text-gray-600 mb-1">簽到時間</label>

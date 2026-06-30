@@ -155,61 +155,84 @@ onMounted(fetchCoaches)
     </div>
 
     <div v-if="loading" class="text-center py-12 text-gray-400">載入中...</div>
-    <div v-else class="bg-white rounded-xl shadow-sm overflow-hidden">
-      <table class="w-full text-sm">
-        <thead class="bg-gray-50 text-gray-500 text-xs">
-          <tr>
-            <th class="text-left px-5 py-3">姓名</th>
-            <th class="text-left px-5 py-3">帳號</th>
-            <th class="text-left px-5 py-3">身份</th>
-            <th class="text-left px-5 py-3">權限數</th>
-            <th class="px-5 py-3"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="coach in coaches"
-            :key="coach.id"
-            class="border-t border-gray-50 hover:bg-gray-50 transition-colors"
-          >
-            <td class="px-5 py-3.5 font-medium text-gray-800">{{ coach.name }}</td>
-            <td class="px-5 py-3.5 text-gray-500">{{ coach.username }}</td>
-            <td class="px-5 py-3.5">
+    <template v-else>
+      <!-- 桌面版 table -->
+      <div class="hidden lg:block bg-white rounded-xl shadow-sm overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 text-gray-500 text-xs">
+            <tr>
+              <th class="text-left px-5 py-3">姓名</th>
+              <th class="text-left px-5 py-3">帳號</th>
+              <th class="text-left px-5 py-3">身份</th>
+              <th class="text-left px-5 py-3">權限數</th>
+              <th class="px-5 py-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="coach in coaches"
+              :key="coach.id"
+              class="border-t border-gray-50 hover:bg-gray-50 transition-colors"
+            >
+              <td class="px-5 py-3.5 font-medium text-gray-800">{{ coach.name }}</td>
+              <td class="px-5 py-3.5 text-gray-500">{{ coach.username }}</td>
+              <td class="px-5 py-3.5">
+                <span
+                  class="px-2 py-0.5 rounded-full text-xs font-medium"
+                  :class="coach.is_owner ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'"
+                >
+                  {{ coach.is_owner ? '主教練' : '教練' }}
+                </span>
+              </td>
+              <td class="px-5 py-3.5 text-gray-500">{{ coach.is_owner ? '全部' : `${(coach.permissions || []).length} 項` }}</td>
+              <td class="px-5 py-3.5 text-right">
+                <div class="flex gap-2 justify-end">
+                  <el-button v-if="auth.hasPermission('coaches:edit')" size="small" @click="openEdit(coach)">編輯</el-button>
+                  <el-button
+                    v-if="auth.hasPermission('coaches:delete') && !coach.is_owner && coach.id !== auth.lineUid"
+                    size="small" type="danger" @click="deleteCoach(coach)"
+                  >刪除</el-button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-if="!coaches.length" class="text-center py-12 text-gray-400">尚無其他教練</div>
+      </div>
+
+      <!-- 手機版卡片 -->
+      <div class="lg:hidden space-y-2">
+        <div
+          v-for="coach in coaches"
+          :key="coach.id"
+          class="bg-white rounded-xl p-4 shadow-sm flex items-center justify-between gap-3"
+        >
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="text-sm font-medium text-gray-800">{{ coach.name }}</p>
               <span
-                class="px-2 py-0.5 rounded-full text-xs font-medium"
+                class="px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0"
                 :class="coach.is_owner ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'"
               >
                 {{ coach.is_owner ? '主教練' : '教練' }}
               </span>
-            </td>
-            <td class="px-5 py-3.5 text-gray-500">{{ coach.is_owner ? '全部' : `${(coach.permissions || []).length} 項` }}</td>
-            <td class="px-5 py-3.5 text-right">
-              <div class="flex gap-2 justify-end">
-                <el-button
-                  v-if="auth.hasPermission('coaches:edit')"
-                  size="small"
-                  @click="openEdit(coach)"
-                >
-                  編輯
-                </el-button>
-                <el-button
-                  v-if="auth.hasPermission('coaches:delete') && !coach.is_owner && coach.id !== auth.lineUid"
-                  size="small"
-                  type="danger"
-                  @click="deleteCoach(coach)"
-                >
-                  刪除
-                </el-button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div v-if="!coaches.length" class="text-center py-12 text-gray-400">尚無其他教練</div>
-    </div>
+            </div>
+            <p class="text-xs text-gray-400 mt-0.5">{{ coach.username }}・{{ coach.is_owner ? '全部權限' : `${(coach.permissions || []).length} 項權限` }}</p>
+          </div>
+          <div class="flex gap-2 flex-shrink-0">
+            <el-button v-if="auth.hasPermission('coaches:edit')" size="small" @click="openEdit(coach)">編輯</el-button>
+            <el-button
+              v-if="auth.hasPermission('coaches:delete') && !coach.is_owner && coach.id !== auth.lineUid"
+              size="small" type="danger" @click="deleteCoach(coach)"
+            >刪除</el-button>
+          </div>
+        </div>
+        <div v-if="!coaches.length" class="text-center py-8 text-gray-300 text-sm bg-white rounded-xl">尚無其他教練</div>
+      </div>
+    </template>
 
     <!-- 新增 / 編輯 Dialog -->
-    <el-dialog v-model="showForm" :title="editingCoach ? '編輯教練' : '新增教練'" width="520px">
+    <el-dialog v-model="showForm" :title="editingCoach ? '編輯教練' : '新增教練'" width="min(520px, 92vw)">
       <div class="space-y-4">
         <div class="grid grid-cols-2 gap-4">
           <div>

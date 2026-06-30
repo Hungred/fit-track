@@ -89,18 +89,18 @@ onMounted(fetchReport)
 
     <template v-else-if="report">
       <!-- 統計卡片 -->
-      <div class="grid grid-cols-3 gap-4 mb-6">
-        <div class="bg-white rounded-2xl shadow-sm p-5 text-center">
-          <p class="text-sm text-gray-400 mb-1">總出勤次數</p>
-          <p class="text-4xl font-bold text-green-600">{{ report.total_checkins }}</p>
+      <div class="grid grid-cols-3 gap-3 lg:gap-4 mb-6">
+        <div class="bg-white rounded-2xl shadow-sm p-3 lg:p-5 text-center">
+          <p class="text-xs lg:text-sm text-gray-400 mb-1">總出勤次數</p>
+          <p class="text-2xl lg:text-4xl font-bold text-green-600">{{ report.total_checkins }}</p>
         </div>
-        <div class="bg-white rounded-2xl shadow-sm p-5 text-center">
-          <p class="text-sm text-gray-400 mb-1">出勤人數</p>
-          <p class="text-4xl font-bold text-blue-500">{{ report.unique_members }}</p>
+        <div class="bg-white rounded-2xl shadow-sm p-3 lg:p-5 text-center">
+          <p class="text-xs lg:text-sm text-gray-400 mb-1">出勤人數</p>
+          <p class="text-2xl lg:text-4xl font-bold text-blue-500">{{ report.unique_members }}</p>
         </div>
-        <div class="bg-white rounded-2xl shadow-sm p-5 text-center">
-          <p class="text-sm text-gray-400 mb-1">平均每人</p>
-          <p class="text-4xl font-bold text-purple-500">
+        <div class="bg-white rounded-2xl shadow-sm p-3 lg:p-5 text-center">
+          <p class="text-xs lg:text-sm text-gray-400 mb-1">平均每人</p>
+          <p class="text-2xl lg:text-4xl font-bold text-purple-500">
             {{ report.unique_members ? (report.total_checkins / report.unique_members).toFixed(1) : 0 }}
           </p>
           <p class="text-xs text-gray-400 mt-1">堂</p>

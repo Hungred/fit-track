@@ -119,7 +119,7 @@ onMounted(fetchPackages)
 
     <div v-if="loading" class="text-center py-12 text-gray-400">載入中...</div>
 
-    <div v-else class="grid grid-cols-3 gap-4">
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <div
         v-for="pkg in packages"
         :key="pkg.id"
@@ -153,13 +153,13 @@ onMounted(fetchPackages)
         </div>
       </div>
 
-      <div v-if="!packages.length" class="col-span-3 text-center py-12 text-gray-400 bg-white rounded-xl">
+      <div v-if="!packages.length" class="col-span-1 sm:col-span-2 lg:col-span-3 text-center py-12 text-gray-400 bg-white rounded-xl">
         尚未建立任何方案，點右上角新增
       </div>
     </div>
 
     <!-- 建立方案 Dialog -->
-    <el-dialog v-model="showCreate" title="建立堂數方案" width="400px">
+    <el-dialog v-model="showCreate" title="建立堂數方案" width="min(400px, 92vw)">
       <div class="space-y-4">
         <div>
           <label class="block text-sm text-gray-600 mb-1">方案名稱 *</label>
@@ -198,7 +198,7 @@ onMounted(fetchPackages)
     </el-dialog>
 
     <!-- 編輯方案 Dialog -->
-    <el-dialog v-model="showEdit" title="編輯堂數方案" width="400px">
+    <el-dialog v-model="showEdit" title="編輯堂數方案" width="min(400px, 92vw)">
       <div class="space-y-4">
         <div>
           <label class="block text-sm text-gray-600 mb-1">方案名稱 *</label>

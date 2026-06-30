@@ -98,14 +98,19 @@ async function submitBatch() {
   }
 }
 
+function getHeaderToolbar() {
+  return window.innerWidth < 640
+    ? { left: 'prev,next', center: 'title', right: 'today' }
+    : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,myWeek' }
+}
+
 const calendarOptions = ref({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
   initialView: 'dayGridMonth',
   locale: 'zh-tw',
-  headerToolbar: {
-    left: 'prev,next today',
-    center: 'title',
-    right: 'dayGridMonth,myWeek',
+  headerToolbar: getHeaderToolbar(),
+  windowResize: () => {
+    calendarRef.value?.getApi()?.setOption('headerToolbar', getHeaderToolbar())
   },
   customButtons: {
     myWeek: {
@@ -287,7 +292,7 @@ onMounted(async () => {
     </div>
 
     <!-- 課程詳情 Dialog -->
-    <el-dialog v-model="showDetail" :title="selectedClass?.title" width="480px">
+    <el-dialog v-model="showDetail" :title="selectedClass?.title" width="min(480px, 92vw)">
       <div v-if="selectedClass" class="space-y-4">
         <div class="text-sm text-gray-500 space-y-1">
           <p>🕐 {{ dayjs(selectedClass.start_at).format('YYYY/MM/DD HH:mm') }}
@@ -347,7 +352,7 @@ onMounted(async () => {
     <el-dialog
       v-model="showForm"
       :title="editingClass ? '編輯課程' : (batchStep === 1 ? '新增課程' : '確認課程內容')"
-      :width="editingClass ? '480px' : '680px'"
+      :width="editingClass ? 'min(480px, 92vw)' : 'min(680px, 95vw)'"
     >
       <!-- 編輯模式（單筆） -->
       <div v-if="editingClass" class="space-y-4">
@@ -384,24 +389,26 @@ onMounted(async () => {
             :key="i"
             class="border border-gray-100 rounded-xl p-4 space-y-3 relative"
           >
-            <div class="flex items-center gap-3">
-              <div class="flex-1">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 items-end">
+              <div class="col-span-2 sm:col-span-1">
                 <label class="block text-xs text-gray-500 mb-1">日期 *</label>
                 <el-input v-model="item.date" type="date" size="small" />
               </div>
-              <div class="flex-1">
+              <div>
                 <label class="block text-xs text-gray-500 mb-1">開始 *</label>
                 <el-input v-model="item.start_time" type="time" size="small" @change="onStartTimeChange(item)" />
               </div>
-              <div class="flex-1">
-                <label class="block text-xs text-gray-500 mb-1">結束</label>
-                <el-input v-model="item.end_time" type="time" size="small" />
+              <div class="flex items-end gap-2">
+                <div class="flex-1">
+                  <label class="block text-xs text-gray-500 mb-1">結束</label>
+                  <el-input v-model="item.end_time" type="time" size="small" />
+                </div>
+                <button
+                  v-if="batchItems.length > 1"
+                  @click="removeBatchItem(i)"
+                  class="mb-0.5 text-gray-400 hover:text-red-400 text-lg leading-none flex-shrink-0"
+                >×</button>
               </div>
-              <button
-                v-if="batchItems.length > 1"
-                @click="removeBatchItem(i)"
-                class="mt-4 text-gray-400 hover:text-red-400 text-lg leading-none"
-              >×</button>
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>

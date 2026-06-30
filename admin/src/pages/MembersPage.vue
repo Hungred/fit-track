@@ -81,61 +81,100 @@ onMounted(fetchData)
     <el-input v-model="search" placeholder="搜尋學員姓名或電話..." class="mb-4" clearable />
 
     <div v-if="loading" class="text-center py-12 text-gray-400">載入中...</div>
-    <div v-else class="bg-white rounded-xl shadow-sm overflow-hidden">
-      <table class="w-full text-sm">
-        <thead class="bg-gray-50 text-gray-500 text-xs">
-          <tr>
-            <th class="text-left px-5 py-3">學員</th>
-            <th class="text-left px-5 py-3">今日</th>
-            <th class="text-left px-5 py-3">有效方案</th>
-            <th class="text-left px-5 py-3">剩餘堂數</th>
-            <th class="px-5 py-3"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="m in filtered"
-            :key="m.id"
-            class="border-t border-gray-50 hover:bg-gray-50 transition-colors"
+    <template v-else>
+      <!-- 桌面版 table -->
+      <div class="hidden lg:block bg-white rounded-xl shadow-sm overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 text-gray-500 text-xs">
+            <tr>
+              <th class="text-left px-5 py-3">學員</th>
+              <th class="text-left px-5 py-3">今日</th>
+              <th class="text-left px-5 py-3">有效方案</th>
+              <th class="text-left px-5 py-3">剩餘堂數</th>
+              <th class="px-5 py-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="m in filtered"
+              :key="m.id"
+              class="border-t border-gray-50 hover:bg-gray-50 transition-colors"
+            >
+              <td class="px-5 py-3.5">
+                <p class="font-medium text-gray-800">{{ m.name }}</p>
+                <p class="text-gray-400 text-xs">{{ m.phone }}</p>
+              </td>
+              <td class="px-5 py-3.5">
+                <span v-if="m.checked_in_today" class="text-green-500 font-medium">✅ 已簽到</span>
+                <span v-else-if="todayLeaveIds.has(m.id)" class="text-orange-400 font-medium">🏖️ 請假</span>
+                <span v-else class="text-gray-300">—</span>
+              </td>
+              <td class="px-5 py-3.5">
+                <div v-if="m.active_packages?.length" class="space-y-0.5">
+                  <p v-for="p in m.active_packages" :key="p.id" class="text-xs text-gray-600">
+                    {{ p.package?.name }}
+                  </p>
+                </div>
+                <span v-else class="text-red-400 text-xs">無有效方案</span>
+              </td>
+              <td class="px-5 py-3.5">
+                <span class="font-semibold text-green-600">
+                  {{ m.active_packages?.reduce((s, p) => s + p.remaining_sessions, 0) || 0 }}
+                </span> 堂
+              </td>
+              <td class="px-5 py-3.5 text-right">
+                <el-button
+                  v-if="auth.hasPermission('members:view')"
+                  size="small"
+                  @click="router.push(`/members/${m.id}`)"
+                >
+                  管理
+                </el-button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 手機版卡片 -->
+      <div class="lg:hidden space-y-2">
+        <div
+          v-for="m in filtered"
+          :key="m.id"
+          class="bg-white rounded-xl p-4 shadow-sm flex items-center justify-between gap-3"
+        >
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="text-sm font-medium text-gray-800">{{ m.name }}</p>
+              <span v-if="m.checked_in_today" class="text-green-500 text-xs font-medium">✅ 已簽到</span>
+              <span v-else-if="todayLeaveIds.has(m.id)" class="text-orange-400 text-xs font-medium">🏖️ 請假</span>
+            </div>
+            <p class="text-xs text-gray-400">{{ m.phone }}</p>
+            <div class="mt-1 flex items-center gap-2 flex-wrap">
+              <span class="text-xs text-gray-500">
+                剩餘 <span class="font-semibold text-green-600">{{ m.active_packages?.reduce((s, p) => s + p.remaining_sessions, 0) || 0 }}</span> 堂
+              </span>
+              <span v-if="!m.active_packages?.length" class="text-red-400 text-xs">無有效方案</span>
+              <span v-else class="text-xs text-gray-400">・{{ m.active_packages.map(p => p.package?.name).join('、') }}</span>
+            </div>
+          </div>
+          <el-button
+            v-if="auth.hasPermission('members:view')"
+            size="small"
+            class="flex-shrink-0"
+            @click="router.push(`/members/${m.id}`)"
           >
-            <td class="px-5 py-3.5">
-              <p class="font-medium text-gray-800">{{ m.name }}</p>
-              <p class="text-gray-400 text-xs">{{ m.phone }}</p>
-            </td>
-            <td class="px-5 py-3.5">
-              <span v-if="m.checked_in_today" class="text-green-500 font-medium">✅ 已簽到</span>
-              <span v-else-if="todayLeaveIds.has(m.id)" class="text-orange-400 font-medium">🏖️ 請假</span>
-              <span v-else class="text-gray-300">—</span>
-            </td>
-            <td class="px-5 py-3.5">
-              <div v-if="m.active_packages?.length" class="space-y-0.5">
-                <p v-for="p in m.active_packages" :key="p.id" class="text-xs text-gray-600">
-                  {{ p.package?.name }}
-                </p>
-              </div>
-              <span v-else class="text-red-400 text-xs">無有效方案</span>
-            </td>
-            <td class="px-5 py-3.5">
-              <span class="font-semibold text-green-600">
-                {{ m.active_packages?.reduce((s, p) => s + p.remaining_sessions, 0) || 0 }}
-              </span> 堂
-            </td>
-            <td class="px-5 py-3.5 text-right">
-              <el-button
-                v-if="auth.hasPermission('members:view')"
-                size="small"
-                @click="router.push(`/members/${m.id}`)"
-              >
-                管理
-              </el-button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+            管理
+          </el-button>
+        </div>
+        <div v-if="!filtered.length" class="text-center py-8 text-gray-300 text-sm bg-white rounded-xl">
+          無符合條件的學員
+        </div>
+      </div>
+    </template>
 
     <!-- 手動補登 Dialog -->
-    <el-dialog v-model="showManualCheckin" title="手動補登" width="400px">
+    <el-dialog v-model="showManualCheckin" title="手動補登" width="min(400px, 92vw)">
       <div class="space-y-4">
         <div>
           <label class="block text-sm text-gray-600 mb-1">選擇學員</label>
