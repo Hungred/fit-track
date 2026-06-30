@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
+import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
 import { classApi, coachApi } from '../api/index.js'
 import { useAuthStore } from '../stores/auth.js'
@@ -98,19 +99,28 @@ async function submitBatch() {
   }
 }
 
+function isMobile() { return window.innerWidth < 640 }
+
+function getInitialView() {
+  return isMobile() ? 'listMonth' : 'dayGridMonth'
+}
+
 function getHeaderToolbar() {
-  return window.innerWidth < 640
+  return isMobile()
     ? { left: 'prev,next', center: 'title', right: 'today' }
     : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,myWeek' }
 }
 
 const calendarOptions = ref({
-  plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
-  initialView: 'dayGridMonth',
+  plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
+  initialView: getInitialView(),
   locale: 'zh-tw',
   headerToolbar: getHeaderToolbar(),
   windowResize: () => {
-    calendarRef.value?.getApi()?.setOption('headerToolbar', getHeaderToolbar())
+    const api = calendarRef.value?.getApi()
+    if (!api) return
+    api.setOption('headerToolbar', getHeaderToolbar())
+    api.changeView(getInitialView())
   },
   customButtons: {
     myWeek: {
@@ -123,7 +133,8 @@ const calendarOptions = ref({
       },
     },
   },
-  buttonText: { today: '今天', month: '月' },
+  buttonText: { today: '今天', month: '月', list: '清單' },
+  noEventsText: '本月無課程',
   eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
   eventSources: [{ events: loadEvents }],
   dateClick: (info) => {
@@ -360,8 +371,8 @@ onMounted(async () => {
           <label class="block text-sm text-gray-600 mb-1">課程名稱（選填）</label>
           <el-input v-model="form.title" placeholder="例如：週一早班" />
         </div>
-        <div class="grid grid-cols-3 gap-3">
-          <div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div class="col-span-2 sm:col-span-1">
             <label class="block text-sm text-gray-600 mb-1">日期 *</label>
             <el-input v-model="form.date" type="date" />
           </div>
