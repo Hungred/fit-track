@@ -70,11 +70,14 @@ export const coachManageApi = {
   delete: (id) => api.delete(`/api/coach/coaches/${id}`),
 }
 
+const opHeaders = () => ({ 'x-operator-password': localStorage.getItem('operator_password') })
+
 export const operatorApi = {
   login: (password) => api.post('/api/operator/login', { password }),
-  listGyms: () => api.get('/api/operator/gyms', { headers: { 'x-operator-password': localStorage.getItem('operator_password') } }),
-  getGym: (id) => api.get(`/api/operator/gyms/${id}`, { headers: { 'x-operator-password': localStorage.getItem('operator_password') } }),
-  createGym: (data) => api.post('/api/operator/gyms', data, { headers: { 'x-operator-password': localStorage.getItem('operator_password') } }),
-  updateGym: (id, data) => api.patch(`/api/operator/gyms/${id}`, data, { headers: { 'x-operator-password': localStorage.getItem('operator_password') } }),
-  deleteGym: (id) => api.delete(`/api/operator/gyms/${id}`, { headers: { 'x-operator-password': localStorage.getItem('operator_password') } }),
+  listGyms: () => api.get('/api/operator/gyms', { headers: opHeaders() }),
+  getGym: (id) => api.get(`/api/operator/gyms/${id}`, { headers: opHeaders() }),
+  createGym: (data) => api.post('/api/operator/gyms', data, { headers: opHeaders() }),
+  updateGym: (id, data) => api.patch(`/api/operator/gyms/${id}`, data, { headers: opHeaders() }),
+  deleteGym: (id) => api.delete(`/api/operator/gyms/${id}`, { headers: opHeaders() }),
+  getLogs: (params = {}) => api.get('/api/operator/logs', { headers: opHeaders(), params }),
 }

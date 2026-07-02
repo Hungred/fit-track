@@ -1,11 +1,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { operatorApi } from '../api/index.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import OperatorLayout from '../components/OperatorLayout.vue'
 import dayjs from 'dayjs'
 
-const router = useRouter()
 const gyms = ref([])
 const loading = ref(true)
 
@@ -37,7 +36,6 @@ async function fetchGyms() {
     gyms.value = res.data.gyms
   } catch {
     ElMessage.error('載入失敗，請重新登入')
-    router.push('/operator/login')
   } finally {
     loading.value = false
   }
@@ -126,94 +124,79 @@ function copyGymLink(gym) {
   ElMessage.success('後台連結已複製')
 }
 
-function logout() {
-  localStorage.removeItem('operator_password')
-  router.push('/operator/login')
-}
-
-onMounted(() => { fetchGyms() })
+onMounted(fetchGyms)
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <div class="bg-white border-b border-gray-100 px-6 pb-4 flex items-center justify-between"
-      style="padding-top: max(env(safe-area-inset-top), 1rem)">
-      <div>
-        <h1 class="text-lg font-bold text-blue-600">📓 Fit Track 營運後台</h1>
-        <p class="text-xs text-gray-400">健身房管理</p>
+  <OperatorLayout>
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-xl font-bold text-gray-800">健身房管理</h2>
+      <el-button type="primary" @click="openCreate" style="background:#2563eb;border-color:#2563eb">
+        ＋ 新增健身房
+      </el-button>
+    </div>
+
+    <!-- 統計 -->
+    <div class="grid grid-cols-3 gap-3 lg:gap-4 mb-6">
+      <div class="bg-white rounded-2xl shadow-sm p-3 lg:p-5 text-center">
+        <p class="text-xs lg:text-sm text-gray-400 mb-1">健身房總數</p>
+        <p class="text-2xl lg:text-4xl font-bold text-blue-600">{{ gyms.length }}</p>
       </div>
-      <div class="flex gap-3">
-        <el-button type="primary" @click="openCreate" style="background:#2563eb;border-color:#2563eb">
-          ＋ 新增健身房
-        </el-button>
-        <el-button @click="logout">登出</el-button>
+      <div class="bg-white rounded-2xl shadow-sm p-3 lg:p-5 text-center">
+        <p class="text-xs lg:text-sm text-gray-400 mb-1">營運中</p>
+        <p class="text-2xl lg:text-4xl font-bold text-green-500">{{ gyms.filter(g => g.status === 'active').length }}</p>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-3 lg:p-5 text-center">
+        <p class="text-xs lg:text-sm text-gray-400 mb-1">平台總學員</p>
+        <p class="text-2xl lg:text-4xl font-bold text-purple-500">{{ gyms.reduce((s, g) => s + g.member_count, 0) }}</p>
       </div>
     </div>
 
-    <div class="p-6">
-      <!-- 統計 -->
-      <div class="grid grid-cols-3 gap-4 mb-6">
-        <div class="bg-white rounded-2xl shadow-sm p-5 text-center">
-          <p class="text-sm text-gray-400 mb-1">健身房總數</p>
-          <p class="text-4xl font-bold text-blue-600">{{ gyms.length }}</p>
-        </div>
-        <div class="bg-white rounded-2xl shadow-sm p-5 text-center">
-          <p class="text-sm text-gray-400 mb-1">營運中</p>
-          <p class="text-4xl font-bold text-green-500">{{ gyms.filter(g => g.status === 'active').length }}</p>
-        </div>
-        <div class="bg-white rounded-2xl shadow-sm p-5 text-center">
-          <p class="text-sm text-gray-400 mb-1">平台總學員數</p>
-          <p class="text-4xl font-bold text-purple-500">{{ gyms.reduce((s, g) => s + g.member_count, 0) }}</p>
-        </div>
-      </div>
-
-      <!-- 健身房列表 -->
-      <div v-if="loading" class="text-center py-16 text-gray-400">載入中...</div>
-      <div v-else class="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-50 text-gray-500 text-xs">
-            <tr>
-              <th class="text-left px-5 py-3">健身房名稱</th>
-              <th class="text-left px-5 py-3">學員數</th>
-              <th class="text-left px-5 py-3">本月出勤</th>
-              <th class="text-left px-5 py-3">狀態</th>
-              <th class="text-left px-5 py-3">建立時間</th>
-              <th class="px-5 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="gym in gyms" :key="gym.id"
-              class="border-t border-gray-50 hover:bg-gray-50 transition-colors">
-              <td class="px-5 py-3.5 font-medium text-gray-800">{{ gym.name }}</td>
-              <td class="px-5 py-3.5 text-gray-600">{{ gym.member_count }} 人</td>
-              <td class="px-5 py-3.5 text-green-600 font-semibold">{{ gym.month_checkins }} 次</td>
-              <td class="px-5 py-3.5">
-                <span class="px-2 py-0.5 rounded-full text-xs font-medium"
-                  :class="gym.status === 'active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-400'">
-                  {{ gym.status === 'active' ? '營運中' : '已停用' }}
-                </span>
-              </td>
-              <td class="px-5 py-3.5 text-gray-400 text-xs">{{ dayjs(gym.created_at).format('YYYY/MM/DD') }}</td>
-              <td class="px-5 py-3.5">
-                <div class="flex gap-2 justify-end">
-                  <el-button size="small" @click="copyGymLink(gym)">複製連結</el-button>
-                  <el-button size="small" @click="openEdit(gym)">編輯</el-button>
-                  <el-button size="small" :type="gym.status === 'active' ? 'danger' : 'success'"
-                    @click="toggleStatus(gym)">
-                    {{ gym.status === 'active' ? '停用' : '啟用' }}
-                  </el-button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div v-if="!gyms.length" class="text-center py-12 text-gray-400">尚無健身房</div>
-      </div>
+    <!-- 健身房列表 -->
+    <div v-if="loading" class="text-center py-16 text-gray-400">載入中...</div>
+    <div v-else class="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-gray-500 text-xs">
+          <tr>
+            <th class="text-left px-5 py-3">健身房名稱</th>
+            <th class="text-left px-5 py-3">學員數</th>
+            <th class="text-left px-5 py-3 hidden sm:table-cell">本月出勤</th>
+            <th class="text-left px-5 py-3">狀態</th>
+            <th class="text-left px-5 py-3 hidden md:table-cell">建立時間</th>
+            <th class="px-5 py-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="gym in gyms" :key="gym.id"
+            class="border-t border-gray-50 hover:bg-gray-50 transition-colors">
+            <td class="px-5 py-3.5 font-medium text-gray-800">{{ gym.name }}</td>
+            <td class="px-5 py-3.5 text-gray-600">{{ gym.member_count }} 人</td>
+            <td class="px-5 py-3.5 text-green-600 font-semibold hidden sm:table-cell">{{ gym.month_checkins }} 次</td>
+            <td class="px-5 py-3.5">
+              <span class="px-2 py-0.5 rounded-full text-xs font-medium"
+                :class="gym.status === 'active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-400'">
+                {{ gym.status === 'active' ? '營運中' : '已停用' }}
+              </span>
+            </td>
+            <td class="px-5 py-3.5 text-gray-400 text-xs hidden md:table-cell">{{ dayjs(gym.created_at).format('YYYY/MM/DD') }}</td>
+            <td class="px-5 py-3.5">
+              <div class="flex gap-2 justify-end flex-wrap">
+                <el-button size="small" @click="copyGymLink(gym)">複製連結</el-button>
+                <el-button size="small" @click="openEdit(gym)">編輯</el-button>
+                <el-button size="small" :type="gym.status === 'active' ? 'danger' : 'success'"
+                  @click="toggleStatus(gym)">
+                  {{ gym.status === 'active' ? '停用' : '啟用' }}
+                </el-button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-if="!gyms.length" class="text-center py-12 text-gray-400">尚無健身房</div>
     </div>
 
     <!-- 新增/編輯 Dialog -->
-    <el-dialog v-model="showForm" :title="editingGym ? '編輯健身房' : '新增健身房'" width="500px">
+    <el-dialog v-model="showForm" :title="editingGym ? '編輯健身房' : '新增健身房'" width="min(500px, 92vw)">
       <div class="space-y-4">
         <div>
           <label class="block text-sm text-gray-600 mb-1">健身房名稱 *</label>
@@ -246,13 +229,13 @@ onMounted(() => { fetchGyms() })
     </el-dialog>
 
     <!-- 確認變更 Dialog -->
-    <el-dialog v-model="showConfirm" title="確認變更內容" width="480px">
+    <el-dialog v-model="showConfirm" title="確認變更內容" width="min(480px, 92vw)">
       <p class="text-sm text-gray-500 mb-4">以下欄位將被更新，確認後送出：</p>
       <div class="space-y-3">
         <div v-for="item in diffItems" :key="item.label"
           class="bg-gray-50 rounded-xl px-4 py-3 text-sm">
           <p class="font-medium text-gray-700 mb-1">{{ item.label }}</p>
-          <div class="flex items-center gap-2 text-xs">
+          <div class="flex items-center gap-2 text-xs flex-wrap">
             <span class="text-red-400 line-through break-all">{{ item.before }}</span>
             <span class="text-gray-400">→</span>
             <span class="text-green-600 break-all">{{ item.after }}</span>
@@ -267,5 +250,5 @@ onMounted(() => { fetchGyms() })
         </el-button>
       </template>
     </el-dialog>
-  </div>
+  </OperatorLayout>
 </template>

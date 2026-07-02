@@ -13,6 +13,7 @@ const routes = [
   { path: '/coaches', component: () => import('../pages/CoachesPage.vue'), meta: { permission: 'coaches:list' } },
   { path: '/operator/login', component: () => import('../pages/OperatorLoginPage.vue') },
   { path: '/operator', component: () => import('../pages/OperatorPage.vue') },
+  { path: '/operator/logs', component: () => import('../pages/OperatorLogsPage.vue') },
 ]
 
 const router = createRouter({
@@ -20,15 +21,17 @@ const router = createRouter({
   routes,
 })
 
-const operatorPaths = ['/operator', '/operator/login']
-
 function updateManifest(gymId) {
   const link = document.querySelector('link[rel="manifest"]')
   if (link && gymId) link.href = `/api/manifest?gym=${gymId}`
 }
 
 router.beforeEach((to) => {
-  if (operatorPaths.some(p => to.path.startsWith(p))) return
+  if (to.path.startsWith('/operator')) {
+    if (to.path === '/operator/login') return
+    if (!localStorage.getItem('operator_password')) return '/operator/login'
+    return
+  }
 
   const auth = useAuthStore()
   if (to.query.gym) {
