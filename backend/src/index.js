@@ -10,6 +10,7 @@ import memberRouter from './routes/members.js'
 import checkinRouter from './routes/checkin.js'
 import coachRouter from './routes/coach.js'
 import operatorRouter from './routes/operator.js'
+import notifyRouter from './routes/notify.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -26,6 +27,9 @@ app.get('/api/classes/:id/ical', getClassIcal)
 
 // 營運方路由（不需要 gym middleware）
 app.use('/api/operator', operatorRouter)
+
+// 排程通知（外部 cron 觸發）
+app.use('/api/notify', notifyRouter)
 
 // webhook（LINE 自行處理驗證）
 app.use('/webhook', webhookRouter)

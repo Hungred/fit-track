@@ -286,6 +286,57 @@ export function classStatusReplyMessage(action, cls) {
   }
 }
 
+export function classReminderMessage(memberName, cls) {
+  const dateStr = new Date(cls.start_at).toLocaleString('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    month: 'numeric',
+    day: 'numeric',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+  return {
+    type: 'flex',
+    altText: `⏰ 課程提醒：1 小時後開始`,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        backgroundColor: '#2563eb',
+        contents: [{ type: 'text', text: '⏰ 課程提醒', color: '#ffffff', weight: 'bold', size: 'md' }],
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          { type: 'text', text: `${memberName} 你好`, weight: 'bold', size: 'md', color: '#1f2937' },
+          {
+            type: 'text',
+            text: '你的課程將於 1 小時後開始，請準時到場！',
+            size: 'sm', color: '#6b7280', wrap: true, margin: 'sm',
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            margin: 'lg',
+            spacing: 'xs',
+            contents: [
+              { type: 'text', text: `📅 ${cls.title || '上課'}`, size: 'sm', color: '#374151' },
+              { type: 'text', text: `🕐 ${dateStr}`, size: 'sm', color: '#374151', margin: 'xs' },
+              ...(cls.coach?.name
+                ? [{ type: 'text', text: `👤 教練：${cls.coach.name}`, size: 'sm', color: '#374151', margin: 'xs' }]
+                : []),
+            ],
+          },
+        ],
+      },
+    },
+  }
+}
+
 export function lowSessionMessage(memberName, remaining, packageName) {
   return [
     {
