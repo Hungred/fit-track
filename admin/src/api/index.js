@@ -70,6 +70,17 @@ export const coachManageApi = {
   delete: (id) => api.delete(`/api/coach/coaches/${id}`),
 }
 
+export const spaceApi = {
+  listSpaces: () => api.get('/api/spaces'),
+  createSpace: (data) => api.post('/api/spaces', data),
+  updateSpace: (id, data) => api.patch(`/api/spaces/${id}`, data),
+  deleteSpace: (id) => api.delete(`/api/spaces/${id}`),
+  listBookings: (params = {}) => api.get('/api/spaces/bookings', { params }),
+  createBooking: (data) => api.post('/api/spaces/bookings', data),
+  updateBooking: (id, data) => api.patch(`/api/spaces/bookings/${id}`, data),
+  deleteBooking: (id) => api.delete(`/api/spaces/bookings/${id}`),
+}
+
 const opHeaders = () => ({ 'x-operator-password': localStorage.getItem('operator_password') })
 
 export const operatorApi = {

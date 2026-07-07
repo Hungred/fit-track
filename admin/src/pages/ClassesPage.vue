@@ -5,7 +5,7 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
-import { classApi, coachApi } from '../api/index.js'
+import { classApi, coachApi, spaceApi } from '../api/index.js'
 import { useAuthStore } from '../stores/auth.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Layout from '../components/Layout.vue'
@@ -19,6 +19,8 @@ const showDetail = ref(false)
 const editingClass = ref(null)
 const selectedClass = ref(null)
 const submitting = ref(false)
+const selectedBooking = ref(null)
+const showBookingDetail = ref(false)
 
 // 編輯用（單筆）
 const emptyForm = () => ({
@@ -145,7 +147,12 @@ const calendarOptions = ref({
     showForm.value = true
   },
   eventClick: (info) => {
-    openDetail(info.event.extendedProps.classData)
+    if (info.event.extendedProps.type === 'booking') {
+      selectedBooking.value = info.event.extendedProps.bookingData
+      showBookingDetail.value = true
+    } else {
+      openDetail(info.event.extendedProps.classData)
+    }
   },
 })
 
@@ -170,6 +177,19 @@ function buildEvent(c) {
   }
 }
 
+function buildBookingEvent(b) {
+  const isConfirmed = b.status === 'confirmed'
+  return {
+    id: `booking-${b.id}`,
+    title: `🏢 ${b.space?.name || '場地'} — ${b.renter_name}`,
+    start: b.start_at,
+    end: b.end_at,
+    backgroundColor: isConfirmed ? '#7c3aed' : '#a78bfa',
+    borderColor: isConfirmed ? '#6d28d9' : '#8b5cf6',
+    extendedProps: { type: 'booking', bookingData: b },
+  }
+}
+
 async function loadEvents(info) {
   const months = []
   let curr = dayjs(info.start).startOf('month')
@@ -178,12 +198,25 @@ async function loadEvents(info) {
     months.push(curr.format('YYYY-MM'))
     curr = curr.add(1, 'month')
   }
-  const results = await Promise.all(months.map(m => classApi.list(m)))
-  const seen = new Set()
-  return results
+
+  const [classResults, bookingResults] = await Promise.all([
+    Promise.all(months.map(m => classApi.list(m))),
+    Promise.all(months.map(m => spaceApi.listBookings({ month: m }))),
+  ])
+
+  const seenC = new Set()
+  const classEvents = classResults
     .flatMap(r => r.data.classes || [])
-    .filter(c => !seen.has(c.id) && seen.add(c.id))
+    .filter(c => !seenC.has(c.id) && seenC.add(c.id))
     .map(buildEvent)
+
+  const seenB = new Set()
+  const bookingEvents = bookingResults
+    .flatMap(r => r.data.bookings || [])
+    .filter(b => b.status !== 'cancelled' && !seenB.has(b.id) && seenB.add(b.id))
+    .map(buildBookingEvent)
+
+  return [...classEvents, ...bookingEvents]
 }
 
 function refreshAll() {
@@ -356,6 +389,43 @@ onMounted(async () => {
           @click="openEdit"
           style="background:#16a34a;border-color:#16a34a"
         >編輯</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 場地預約詳情 Dialog -->
+    <el-dialog v-model="showBookingDetail" title="場地預約詳情" width="min(400px, 92vw)">
+      <div v-if="selectedBooking" class="space-y-3 text-sm">
+        <div class="flex justify-between">
+          <span class="text-gray-500">場地</span>
+          <span class="font-medium">{{ selectedBooking.space?.name }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-500">租借人</span>
+          <span class="font-medium">{{ selectedBooking.renter_name }}</span>
+        </div>
+        <div v-if="selectedBooking.renter_phone" class="flex justify-between">
+          <span class="text-gray-500">電話</span>
+          <span>{{ selectedBooking.renter_phone }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-500">時間</span>
+          <span>{{ dayjs(selectedBooking.start_at).format('MM/DD HH:mm') }} – {{ dayjs(selectedBooking.end_at).format('HH:mm') }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-500">金額</span>
+          <span class="font-bold text-purple-600">NT${{ selectedBooking.total_price }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-500">狀態</span>
+          <span class="text-xs px-2 py-0.5 rounded-full"
+            :class="selectedBooking.status === 'confirmed' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'">
+            {{ selectedBooking.status === 'confirmed' ? '已確認' : '待確認' }}
+          </span>
+        </div>
+        <div v-if="selectedBooking.notes"><span class="text-gray-500">備註：</span>{{ selectedBooking.notes }}</div>
+      </div>
+      <template #footer>
+        <el-button @click="showBookingDetail = false">關閉</el-button>
       </template>
     </el-dialog>
 

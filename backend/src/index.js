@@ -11,6 +11,7 @@ import checkinRouter from './routes/checkin.js'
 import coachRouter from './routes/coach.js'
 import operatorRouter from './routes/operator.js'
 import notifyRouter from './routes/notify.js'
+import spacesRouter from './routes/spaces.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -39,6 +40,7 @@ app.use('/api/auth', requireGym, authRouter)
 app.use('/api/members', requireGym, memberRouter)
 app.use('/api/checkin', requireGym, checkinRouter)
 app.use('/api/coach', requireGym, coachRouter)
+app.use('/api/spaces', requireGym, spacesRouter)
 
 app.listen(PORT, () => {
   console.log(`Fit Track API running on port ${PORT}`)

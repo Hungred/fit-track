@@ -30,6 +30,11 @@ export const leaveApi = {
   cancelLeave: (leave_date) => api.delete('/api/members/me/leave', { data: { leave_date } }),
 }
 
+export const spaceApi = {
+  listSpaces: () => api.get('/api/spaces'),
+  createBooking: (data) => api.post('/api/spaces/bookings', data),
+}
+
 export const classApi = {
   getMyClasses: () => api.get('/api/members/me/classes'),
   updateMyEnrollment: (classId, status) => api.patch(`/api/members/me/classes/${classId}`, { status }),

@@ -337,6 +337,76 @@ export function classReminderMessage(memberName, cls) {
   }
 }
 
+export function spaceBookingReceivedMessage(renterName, booking, spaceName) {
+  const dateStr = new Date(booking.start_at).toLocaleString('zh-TW', {
+    timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit',
+  })
+  const endStr = new Date(booking.end_at).toLocaleString('zh-TW', {
+    timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit',
+  })
+  return {
+    type: 'flex',
+    altText: '🏢 場地預約已收到',
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box', layout: 'vertical', backgroundColor: '#7c3aed',
+        contents: [{ type: 'text', text: '🏢 場地預約已收到', color: '#ffffff', weight: 'bold', size: 'md' }],
+      },
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'sm',
+        contents: [
+          { type: 'text', text: `${renterName} 你好`, weight: 'bold', size: 'md', color: '#1f2937' },
+          { type: 'text', text: '你的場地預約已收到，我們將盡快確認！', size: 'sm', color: '#6b7280', wrap: true, margin: 'sm' },
+          {
+            type: 'box', layout: 'vertical', margin: 'lg', spacing: 'xs',
+            contents: [
+              { type: 'text', text: `📍 ${spaceName}`, size: 'sm', color: '#374151' },
+              { type: 'text', text: `🕐 ${dateStr} – ${endStr}`, size: 'sm', color: '#374151', margin: 'xs' },
+              { type: 'text', text: `💰 NT$${booking.total_price}`, size: 'sm', color: '#374151', margin: 'xs' },
+            ],
+          },
+        ],
+      },
+    },
+  }
+}
+
+export function spaceBookingConfirmedMessage(renterName, booking, spaceName) {
+  const dateStr = new Date(booking.start_at).toLocaleString('zh-TW', {
+    timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit',
+  })
+  const endStr = new Date(booking.end_at).toLocaleString('zh-TW', {
+    timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit',
+  })
+  return {
+    type: 'flex',
+    altText: '✅ 場地預約已確認',
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box', layout: 'vertical', backgroundColor: '#16a34a',
+        contents: [{ type: 'text', text: '✅ 場地預約已確認', color: '#ffffff', weight: 'bold', size: 'md' }],
+      },
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'sm',
+        contents: [
+          { type: 'text', text: `${renterName} 你好`, weight: 'bold', size: 'md', color: '#1f2937' },
+          { type: 'text', text: '你的場地預約已確認，記得準時到場！', size: 'sm', color: '#6b7280', wrap: true, margin: 'sm' },
+          {
+            type: 'box', layout: 'vertical', margin: 'lg', spacing: 'xs',
+            contents: [
+              { type: 'text', text: `📍 ${spaceName}`, size: 'sm', color: '#374151' },
+              { type: 'text', text: `🕐 ${dateStr} – ${endStr}`, size: 'sm', color: '#374151', margin: 'xs' },
+              { type: 'text', text: `💰 NT$${booking.total_price}`, size: 'sm', color: '#374151', margin: 'xs' },
+            ],
+          },
+        ],
+      },
+    },
+  }
+}
+
 export function lowSessionMessage(memberName, remaining, packageName) {
   return [
     {

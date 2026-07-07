@@ -26,6 +26,8 @@ const allNavItems = [
   { path: '/report', label: '月報表', icon: '📈', permission: 'report:view' },
   { path: '/classes', label: '排課管理', icon: '📅', permission: 'classes:view' },
   { path: '/coaches', label: '教練管理', icon: '🏋️', permission: 'coaches:list' },
+  { path: '/spaces', label: '場地管理', icon: '🏢', permission: 'classes:view' },
+  { path: '/space-bookings', label: '場地預約', icon: '📋', permission: 'classes:view' },
 ]
 
 const navItems = computed(() =>

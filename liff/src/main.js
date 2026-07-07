@@ -30,9 +30,9 @@ async function bootstrap() {
     await store.init()
     if (!store.initError) {
       const currentPath = window.location.pathname
-      const knownPaths = ['/', '/bind', '/history', '/classes']
+      const knownPaths = ['/', '/bind', '/history', '/classes', '/space-booking']
       const targetPath = knownPaths.includes(currentPath) ? currentPath : '/'
-      if (!store.member) {
+      if (!store.member && targetPath !== '/space-booking') {
         await router.push('/bind')
       } else {
         await router.push(targetPath)
