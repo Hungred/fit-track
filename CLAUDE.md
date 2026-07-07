@@ -236,6 +236,7 @@ GET    /api/classes/:id/ical            下載課程 iCal 檔案
 - [x] LIFF 課程清單頁（學員查看即將上課的邀請與狀態，可直接在 LIFF 更改狀態）
 - [x] 課程報名互動：pending 可確認/請假/討論；confirmed 可請假或討論；leave 可改確認或討論；discuss 顯示「等待教練回覆」；attended 不顯示按鈕
 - [x] 打卡自動出席：簽到成功時自動將前後 2 小時內的課程 enrollment 更新為 attended
+- [x] 課程開始前 1 小時推播提醒：`GET /api/notify/class-reminders?secret=NOTIFY_SECRET`，掃描 50–70 分鐘內開始的課程，對 `confirmed` 且 `reminded_at IS NULL` 的學員推播 LINE Flex Message，發送後寫入 `reminded_at` 防重複；由 cron-job.org 每 5 分鐘觸發
 - [x] LINE 按鈕重複點擊防護：已回覆過（非 pending）時回覆提示訊息，attended 顯示「已完成打卡」
 - [x] Admin 課程詳情：教練可用下拉選單直接修改學員出席狀態
 - [x] LIFF 圖文選單（立即簽到、我的堂數、出勤記錄、我的課程 四格）
