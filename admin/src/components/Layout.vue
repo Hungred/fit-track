@@ -171,7 +171,7 @@ async function submitChangePwd() {
     </el-dialog>
 
     <!-- Main content -->
-    <main class="lg:ml-56 lg:pt-0 p-4 lg:p-6 main-content">
+    <main class="lg:ml-56 p-4 lg:p-6 main-content">
       <slot />
     </main>
   </div>
@@ -183,7 +183,7 @@ async function submitChangePwd() {
 
 @media (max-width: 1023px) {
   .main-content {
-    padding-top: calc(3.5rem + env(safe-area-inset-top)) !important;
+    padding-top: calc(3.5rem + env(safe-area-inset-top) + 1rem) !important;
   }
 }
 </style>
