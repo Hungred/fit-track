@@ -7,6 +7,7 @@ const routes = [
   { path: '/history', component: () => import('../pages/HistoryPage.vue') },
   { path: '/classes', component: () => import('../pages/ClassesPage.vue') },
   { path: '/space-booking', component: () => import('../pages/SpaceBookingPage.vue') },
+  { path: '/leave', component: () => import('../pages/LeavePage.vue') },
 ]
 
 const router = createRouter({
