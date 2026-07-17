@@ -30,7 +30,9 @@ const totalHours = computed(() => {
   if (!form.value.start_time || !form.value.end_time) return 0
   const [sh, sm] = form.value.start_time.split(':').map(Number)
   const [eh, em] = form.value.end_time.split(':').map(Number)
-  return ((eh * 60 + em) - (sh * 60 + sm)) / 60
+  let diff = (eh * 60 + em) - (sh * 60 + sm)
+  if (diff <= 0) diff += 24 * 60  // 跨午夜
+  return diff / 60
 })
 
 const totalPrice = computed(() => {
@@ -74,8 +76,13 @@ async function submit() {
   if (!form.value.renter_name) { error.value = '請填寫姓名'; return }
   submitting.value = true
   try {
+    const [sh] = form.value.start_time.split(':').map(Number)
+    const [eh] = form.value.end_time.split(':').map(Number)
+    const endDate = eh <= sh
+      ? new Date(new Date(form.value.date).getTime() + 86400000).toLocaleDateString('sv-SE')
+      : form.value.date
     const start_at = `${form.value.date}T${form.value.start_time}:00+08:00`
-    const end_at = `${form.value.date}T${form.value.end_time}:00+08:00`
+    const end_at = `${endDate}T${form.value.end_time}:00+08:00`
     await spaceApi.createBooking({
       space_id: selectedSpace.value.id,
       renter_name: form.value.renter_name,
@@ -170,24 +177,21 @@ onMounted(async () => {
         </div>
 
         <div class="grid grid-cols-2 gap-3">
-          <div>
+          <div class="min-w-0">
             <label class="block text-sm font-medium text-gray-700 mb-2">開始時間</label>
             <input
               type="time"
               v-model="form.start_time"
               :min="selectedSpace?.open_time?.slice(0,5)"
-              :max="selectedSpace?.close_time?.slice(0,5)"
-              class="w-full border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-purple-400"
+              class="w-full border border-gray-200 rounded-xl px-2 py-3 text-base focus:outline-none focus:border-purple-400"
             />
           </div>
-          <div>
+          <div class="min-w-0">
             <label class="block text-sm font-medium text-gray-700 mb-2">結束時間</label>
             <input
               type="time"
               v-model="form.end_time"
-              :min="form.start_time"
-              :max="selectedSpace?.close_time?.slice(0,5)"
-              class="w-full border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-purple-400"
+              class="w-full border border-gray-200 rounded-xl px-2 py-3 text-base focus:outline-none focus:border-purple-400"
             />
           </div>
         </div>
