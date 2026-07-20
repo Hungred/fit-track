@@ -37,6 +37,7 @@ fit-track/
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 SUPER_ADMIN_PASSWORD=          # 營運方後台密碼（取代舊的 ADMIN_PASSWORD）
+NOTIFY_SECRET=                 # 課程提醒 cron 驗證金鑰（cron-job.org 呼叫 /api/notify/class-reminders 時帶入）
 FRONTEND_URL=https://fit-track-liff.vercel.app
 ADMIN_URL=https://fit-track-admin.vercel.app
 PORT=3000
@@ -61,7 +62,7 @@ VITE_API_URL=https://fit-track-api-94nn.onrender.com
 
 ## 資料庫（Supabase）
 
-7 張資料表，後端使用 `service_role` key 繞過 RLS。**所有業務資料表都有 `gym_id` 欄位**做多租戶隔離。
+9 張資料表，後端使用 `service_role` key 繞過 RLS。**所有業務資料表都有 `gym_id` 欄位**做多租戶隔離。
 
 | 資料表 | 說明 |
 |--------|------|
@@ -73,7 +74,9 @@ VITE_API_URL=https://fit-track-api-94nn.onrender.com
 | `qr_tokens` | QR Code token，掃完失效，含 `gym_id` |
 | `leaves` | 請假記錄，`member_id`、`leave_date`（DATE）、`reason`，含 `gym_id`，`(member_id, leave_date, gym_id)` 唯一鍵 |
 | `classes` | 課程主檔，含 `coach_id`、`start_at`、`end_at`（TIMESTAMPTZ）、`max_students`、`notes`、`gym_id` |
-| `class_enrollments` | 學員出席記錄，`status` = `pending` / `confirmed` / `leave` / `discuss` / `attended`，`(class_id, member_id)` 唯一鍵 |
+| `class_enrollments` | 學員出席記錄，`status` = `pending` / `confirmed` / `leave` / `discuss` / `attended`，`(class_id, member_id)` 唯一鍵，`reminded_at`（TIMESTAMPTZ，推播提醒後寫入，防重複發送） |
+| `spaces` | 可租借場地主檔，`name`、`description`、`price_per_hour`、`capacity`、`available_days`（integer[]，0=日~6=六）、`open_time`/`close_time`（TIME）、`is_active`、`gym_id` |
+| `space_bookings` | 場地預約記錄，`space_id`、`renter_name`、`renter_phone`、`renter_line_uid`、`start_at`/`end_at`（TIMESTAMPTZ，支援跨午夜）、`total_hours`、`total_price`、`status`（`pending`/`confirmed`/`cancelled`）、`notes`、`gym_id` |
 
 **members 表新增欄位**（多教練支援）：`username`（TEXT UNIQUE per gym）、`coach_password`（TEXT，bcrypt hash）、`permissions`（JSONB array）、`is_owner`（BOOLEAN）
 
@@ -169,6 +172,19 @@ DELETE /api/coach/classes/:id                        刪除課程
 
 # 公開路由（不需認證）
 GET    /api/classes/:id/ical            下載課程 iCal 檔案
+
+# 課程提醒（不需 x-gym-id，需 ?secret=NOTIFY_SECRET）
+GET    /api/notify/class-reminders      掃描 50–70 分鐘內開始課程，對 confirmed 且 reminded_at IS NULL 的學員推播提醒；由 cron-job.org 每 5 分鐘觸發
+
+# 場地管理（需 x-gym-id）
+GET    /api/spaces                      場地列表（公開，LIFF 可讀）
+POST   /api/spaces                      新增場地（requireCoach）
+PATCH  /api/spaces/:id                  編輯場地（requireCoach）
+DELETE /api/spaces/:id                  刪除場地（requireCoach）
+GET    /api/spaces/bookings             預約列表（requireCoach，query: month, status）
+POST   /api/spaces/bookings             送出預約（公開，LIFF 可呼叫）
+PATCH  /api/spaces/bookings/:id         編輯 / 確認 / 取消預約（requireCoach，確認時推播 LINE）
+DELETE /api/spaces/bookings/:id         刪除預約（requireCoach）
 ```
 
 ---
@@ -180,13 +196,16 @@ GET    /api/classes/:id/ical            下載課程 iCal 檔案
 - `stores/user.js`：`loading` 預設 `true`，避免 LIFF init 完成前 router guard 就跳轉
 - `App.vue`：先判斷 `initError` → `loading` → 才渲染 `RouterView`，解決 Render 冷啟動問題
 - `vercel.json`：SPA routing 需要 rewrites，否則重新整理會 404
-- API 模組：`memberApi`、`checkinApi`、`leaveApi`
+- API 模組：`memberApi`、`checkinApi`、`leaveApi`、`spaceApi`
+- 頁面：`/`（簽到）、`/bind`（綁定）、`/history`（出勤記錄）、`/classes`（我的課程）、`/space-booking`（場地租借）、`/leave`（請假申請）
+- `/space-booking` 允許**未綁定學員**進入（router guard 特例），使用 `liff.getProfile()` 取得 LINE UID
+- `/leave` 為獨立請假申請頁，橘色主題，含請假歷史記錄與取消功能
 
 ### Admin（教練後台）
 - 入口 URL 帶 `?gym=<gym_id>` 設定健身房，router guard 讀取並存 localStorage
 - `stores/auth.js`：store 建立時立刻從 `localStorage` 讀 `coach_uid` 和 `gym_id`，並同步設好 axios header
 - 登入方式：密碼（存在 `gyms` 表的 `admin_password`），不需要輸入 LINE UID
-- 路由：`/login`、`/`（dashboard）、`/members`、`/members/:id`、`/packages`、`/qr`、`/report`、`/classes`、`/coaches`
+- 路由：`/login`、`/`（dashboard）、`/members`、`/members/:id`、`/packages`、`/qr`、`/report`、`/classes`、`/coaches`、`/spaces`（場地管理）、`/space-bookings`（場地預約管理）
 - 側欄依 `permissions` 動態顯示；`is_owner` 才看得到「教練管理」
 - `stores/auth.js` 登入後存 `permissions`（JSONB array）與 `is_owner` 至 localStorage
 - **Operator 後台**（路由不受教練 auth guard 控制）：
@@ -206,6 +225,8 @@ GET    /api/classes/:id/ical            下載課程 iCal 檔案
   - `admin/api/manifest.js`：Vercel serverless function，回傳帶 `start_url: "/?gym=<id>"` 的動態 manifest
   - router guard 偵測到 `?gym=` 時更新 `<link rel="manifest">` href 指向動態 manifest URL
 - **PWA safe area**：`viewport-fit=cover` 讓內容延伸到狀態列，fixed header 需加 `padding-top: env(safe-area-inset-top)`；`Layout.vue` 手機 header 和 main 都已加，`OperatorPage` / `OperatorLoginPage` header 也已加
+- **Admin 頂部 padding**：`Layout.vue` 的 `<main>` 移除 `lg:pt-0`，桌面版和手機版都加 padding，手機版用 `padding-top: calc(3.5rem + env(safe-area-inset-top) + 1rem)` 確保標題不貼頂
+- **ClassesPage 月曆雙事件來源**：`loadEvents()` 同時撈課程 + 場地預約，預約以紫色顯示（pending 淺紫 `#a78bfa`，confirmed 深紫 `#7c3aed`），點擊顯示預約詳情 dialog
 - **401 interceptor**：`api/index.js` 的 401 handler 只在非 `/operator*` 路徑才跳轉到健身房登入頁，避免 operator API 失敗時跑到錯誤頁
 
 ---
@@ -242,6 +263,9 @@ GET    /api/classes/:id/ical            下載課程 iCal 檔案
 - [x] LIFF 圖文選單（立即簽到、我的堂數、出勤記錄、我的課程 四格）
 - [x] Admin RWD（平板/手機版，手機用漢堡選單 + 抽屜側欄；學員/教練管理 Table 改手機卡片；所有 Dialog 改響應式寬度 `min(Xpx, 92vw)`；方案管理 Grid 改 `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`；月報表統計卡字型 `text-2xl lg:text-4xl`；排課管理手機改 `listMonth` 清單視圖，桌面保持月曆）
 - [x] PWA 支援（加入主畫面捷徑，各自獨立圖示與 manifest）
+- [x] 場地租借系統：`spaces` + `space_bookings` 資料表；Admin 後台 SpacesPage（場地 CRUD）與 SpaceBookingsPage（預約管理、確認推播 LINE）；ClassesPage 月曆整合場地預約（紫色事件）；LIFF `/space-booking` 4 步驟預約流程（選場地→選時間→填資料→成功），允許未綁定學員操作
+- [x] LIFF `/leave` 獨立請假申請頁（橘色主題，含請假表單、歷史記錄、取消功能）
+- [x] LINE 圖文選單更新為 2×3（6 格）：立即簽到、我的堂數、租借場地、出勤記錄、我的課程、請假申請；PNG 檔在 `~/Desktop/fit_track_richmenu.png`（2500×1686px，Python Pillow 產生，暖棕/米白棋盤格設計）
 
 ---
 
@@ -303,3 +327,6 @@ GET    /api/classes/:id/ical            下載課程 iCal 檔案
 22. **PWA standalone 狀態列重疊**：`viewport-fit=cover` 讓頁面延伸到 Dynamic Island / 瀏海下方，fixed header 若沒加 `padding-top: env(safe-area-inset-top)` 會與時間欄重疊
 23. **LIFF 圖文選單深層連結不能用 hash**：`liff.line.me/{id}?gym=xxx#/classes` 中的 `#/classes` 是 `liff.line.me` 的 hash fragment，LIFF redirect 時不會轉發給 app，WebView 永遠開在 `/`。正確格式：`liff.line.me/{id}/classes?gym=xxx`（路徑放在 liffId 後面）
 24. **LIFF init 後 URL 還原在 Vue Router 外部**：LIFF SDK 在 `init()` 完成後用 `history.pushState` 把 `/?liff.state=%2Fclasses` 還原成 `/classes`，但這個動作繞過 Vue Router，router 仍停在 `/`。解法：`await initLiff()` 之後主動 `router.push(window.location.pathname)` 讓 router 跟上還原後的路徑
+25. **Render 免費方案暫停（x-render-routing: no-deploy）**：Render 免費服務被 suspend（非冷啟動）時回傳此 header，cron job 全部失敗。需到 Render Dashboard → Resume Service 或手動 Deploy 才能喚醒
+26. **場地預約跨午夜時間計算**：`end - start` 結果為負（如 21:00→00:00 = -21h），要 `if (diff <= 0) diff += 24 * 60` 修正；`end_at` 的日期也要用隔天的日期，否則 start_at > end_at 導致資料庫衝突偵測失效
+27. **Grid 子元素 overflow 溢出**：CSS Grid 預設子元素 `min-width: auto`，內容過長時會撐破格線。在 grid 子元素加 `min-w-0` 讓其可以縮小至 0，解決半寬輸入框在手機上重疊的問題
