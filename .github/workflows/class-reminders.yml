@@ -1,0 +1,16 @@
+name: Class Reminders
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send class reminders
+        run: |
+          curl --max-time 90 --silent \
+            "https://fit-track-api-94nn.onrender.com/api/notify/class-reminders?secret=${{ secrets.NOTIFY_SECRET }}" \
+            || true
