@@ -31,7 +31,7 @@ const totalHours = computed(() => {
   const [sh, sm] = form.value.start_time.split(':').map(Number)
   const [eh, em] = form.value.end_time.split(':').map(Number)
   let diff = (eh * 60 + em) - (sh * 60 + sm)
-  if (diff <= 0) diff += 24 * 60  // 跨午夜
+  if (diff < 0) diff += 24 * 60  // 跨午夜（相同時間不加，讓驗證擋掉）
   return diff / 60
 })
 
@@ -76,9 +76,10 @@ async function submit() {
   if (!form.value.renter_name) { error.value = '請填寫姓名'; return }
   submitting.value = true
   try {
-    const [sh] = form.value.start_time.split(':').map(Number)
-    const [eh] = form.value.end_time.split(':').map(Number)
-    const endDate = eh <= sh
+    const [sh, sm] = form.value.start_time.split(':').map(Number)
+    const [eh, em] = form.value.end_time.split(':').map(Number)
+    const isMidnight = (eh * 60 + em) < (sh * 60 + sm)
+    const endDate = isMidnight
       ? new Date(new Date(form.value.date).getTime() + 86400000).toLocaleDateString('sv-SE')
       : form.value.date
     const start_at = `${form.value.date}T${form.value.start_time}:00+08:00`
@@ -176,22 +177,22 @@ onMounted(async () => {
           </p>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
-          <div class="min-w-0">
+        <div class="flex gap-3">
+          <div class="flex-1">
             <label class="block text-sm font-medium text-gray-700 mb-2">開始時間</label>
             <input
               type="time"
               v-model="form.start_time"
-              :min="selectedSpace?.open_time?.slice(0,5)"
-              class="w-full border border-gray-200 rounded-xl px-2 py-3 text-base focus:outline-none focus:border-purple-400"
+              class="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-purple-400"
             />
           </div>
-          <div class="min-w-0">
+          <div class="flex items-end pb-3 text-gray-400 text-sm">→</div>
+          <div class="flex-1">
             <label class="block text-sm font-medium text-gray-700 mb-2">結束時間</label>
             <input
               type="time"
               v-model="form.end_time"
-              class="w-full border border-gray-200 rounded-xl px-2 py-3 text-base focus:outline-none focus:border-purple-400"
+              class="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-purple-400"
             />
           </div>
         </div>

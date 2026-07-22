@@ -18,16 +18,25 @@ const statusColor = {
   attended: 'bg-purple-50 text-purple-600',
 }
 
-function googleCalendarUrl(cls) {
+function openExternal(url) {
+  if (window.liff?.isInClient()) {
+    window.liff.openWindow({ url, external: true })
+  } else {
+    window.open(url, '_blank')
+  }
+}
+
+function openGoogleCalendar(cls) {
   const start = dayjs(cls.start_at).format('YYYYMMDDTHHmmss')
   const end = cls.end_at
     ? dayjs(cls.end_at).format('YYYYMMDDTHHmmss')
     : dayjs(cls.start_at).add(1, 'hour').format('YYYYMMDDTHHmmss')
-  return `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(cls.title)}&dates=${start}/${end}&details=${encodeURIComponent(cls.notes || '')}`
+  const url = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(cls.title)}&dates=${start}/${end}&details=${encodeURIComponent(cls.notes || '')}`
+  openExternal(url)
 }
 
-function icalUrl(classId) {
-  return `${import.meta.env.VITE_API_URL}/api/classes/${classId}/ical`
+function openIcal(classId) {
+  openExternal(`${import.meta.env.VITE_API_URL}/api/classes/${classId}/ical`)
 }
 
 async function updateStatus(enrollment, status) {
@@ -139,19 +148,18 @@ onMounted(async () => {
         <!-- attended：已出席，不顯示按鈕 -->
 
         <div class="flex gap-2">
-          <a
-            :href="googleCalendarUrl(e.class)"
-            target="_blank"
+          <button
+            @click="openGoogleCalendar(e.class)"
             class="flex-1 text-center text-xs py-2 rounded-xl bg-blue-50 text-blue-600 font-medium"
           >
             Google 行事曆
-          </a>
-          <a
-            :href="icalUrl(e.class?.id)"
+          </button>
+          <button
+            @click="openIcal(e.class?.id)"
             class="flex-1 text-center text-xs py-2 rounded-xl bg-gray-100 text-gray-600 font-medium"
           >
             下載 iCal
-          </a>
+          </button>
         </div>
       </div>
     </div>
