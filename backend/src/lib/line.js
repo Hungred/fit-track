@@ -407,6 +407,45 @@ export function spaceBookingConfirmedMessage(renterName, booking, spaceName) {
   }
 }
 
+export function spaceRentalInfoMessage(gym, liffUrl) {
+  const rules = gym.space_rental_rules || '請聯繫我們了解場地租借詳情。'
+  const footerButtons = []
+
+  if (gym.space_rental_pdf_url) {
+    footerButtons.push({
+      type: 'button', style: 'secondary',
+      action: { type: 'uri', label: '📄 查看規則 PDF', uri: gym.space_rental_pdf_url },
+    })
+  }
+
+  footerButtons.push({
+    type: 'button', style: 'primary', color: '#7c3aed',
+    action: { type: 'uri', label: '📅 立即預約', uri: liffUrl },
+  })
+
+  return {
+    type: 'flex',
+    altText: '🏢 場地租借規則',
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box', layout: 'vertical', backgroundColor: '#7c3aed',
+        contents: [{ type: 'text', text: '🏢 場地租借規則', color: '#ffffff', weight: 'bold', size: 'md' }],
+      },
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'sm',
+        contents: [
+          { type: 'text', text: rules, size: 'sm', color: '#374151', wrap: true },
+        ],
+      },
+      footer: {
+        type: 'box', layout: 'vertical', spacing: 'sm',
+        contents: footerButtons,
+      },
+    },
+  }
+}
+
 export function lowSessionMessage(memberName, remaining, packageName) {
   return [
     {

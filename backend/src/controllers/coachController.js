@@ -104,3 +104,23 @@ export async function getMonthlyReport(req, res) {
 
   res.json({ month, total_checkins: checkins.length, unique_members: breakdown.length, breakdown })
 }
+
+export async function getSpaceSettings(req, res) {
+  const { data, error } = await supabase
+    .from('gyms')
+    .select('space_rental_rules, space_rental_pdf_url')
+    .eq('id', req.gym.id)
+    .single()
+  if (error) return res.status(500).json({ error: error.message })
+  res.json(data)
+}
+
+export async function updateSpaceSettings(req, res) {
+  const { space_rental_rules, space_rental_pdf_url } = req.body
+  const { error } = await supabase
+    .from('gyms')
+    .update({ space_rental_rules: space_rental_rules || null, space_rental_pdf_url: space_rental_pdf_url || null })
+    .eq('id', req.gym.id)
+  if (error) return res.status(500).json({ error: error.message })
+  res.json({ ok: true })
+}

@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { getDashboard, getAllCheckins, generateQrToken, getMonthlyReport } from '../controllers/coachController.js'
+import { getDashboard, getAllCheckins, generateQrToken, getMonthlyReport, getSpaceSettings, updateSpaceSettings } from '../controllers/coachController.js'
 import { updateCheckin, deleteCheckin } from '../controllers/checkinController.js'
 import { getTodayLeaves } from '../controllers/leaveController.js'
 import { listPackageTemplates, createPackageTemplate, updatePackageTemplate, deletePackageTemplate, assignPackage, adjustSessions, updateMemberPackage, deleteMemberPackage } from '../controllers/packageController.js'
@@ -32,6 +32,9 @@ router.patch('/member-packages/:id', updateMemberPackage)
 router.delete('/member-packages/:id', deleteMemberPackage)
 router.patch('/checkins/:id', updateCheckin)
 router.delete('/checkins/:id', deleteCheckin)
+
+router.get('/space-settings', getSpaceSettings)
+router.patch('/space-settings', updateSpaceSettings)
 
 router.get('/classes', listClasses)
 router.post('/classes/batch', batchCreateClasses)

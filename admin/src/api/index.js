@@ -81,6 +81,11 @@ export const spaceApi = {
   deleteBooking: (id) => api.delete(`/api/spaces/bookings/${id}`),
 }
 
+export const gymSettingsApi = {
+  getSpaceSettings: () => api.get('/api/coach/space-settings'),
+  updateSpaceSettings: (data) => api.patch('/api/coach/space-settings', data),
+}
+
 const opHeaders = () => ({ 'x-operator-password': localStorage.getItem('operator_password') })
 
 export const operatorApi = {

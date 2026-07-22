@@ -1,6 +1,6 @@
 import { Client, validateSignature } from '@line/bot-sdk'
 import supabase from '../lib/supabase.js'
-import { welcomeMessage, pushMessage, classStatusReplyMessage } from '../lib/line.js'
+import { welcomeMessage, pushMessage, classStatusReplyMessage, spaceRentalInfoMessage } from '../lib/line.js'
 
 export async function handleWebhook(req, res) {
   const { gymId } = req.params
@@ -39,6 +39,15 @@ async function handleEvent(event, client, gym) {
 async function handlePostback(event, client, gym) {
   const data = event.postback.data
   const lineUid = event.source.userId
+
+  if (data === 'action=space_rental_info') {
+    const liffBase = gym.liff_id
+      ? `https://liff.line.me/${gym.liff_id}/space-booking?gym=${gym.id}`
+      : `${process.env.FRONTEND_URL}/space-booking?gym=${gym.id}`
+    await client.replyMessage(event.replyToken, spaceRentalInfoMessage(gym, liffBase))
+    return
+  }
+
   const match = data.match(/^class_(confirm|leave|discuss)_(.+)$/)
   if (!match) return
 

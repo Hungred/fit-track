@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { spaceApi } from '../api/index.js'
+import { spaceApi, gymSettingsApi } from '../api/index.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Layout from '../components/Layout.vue'
 
@@ -8,6 +8,28 @@ const spaces = ref([])
 const showForm = ref(false)
 const submitting = ref(false)
 const editingSpace = ref(null)
+
+const settings = ref({ space_rental_rules: '', space_rental_pdf_url: '' })
+const savingSettings = ref(false)
+
+async function loadSettings() {
+  try {
+    const res = await gymSettingsApi.getSpaceSettings()
+    settings.value = { space_rental_rules: res.data.space_rental_rules || '', space_rental_pdf_url: res.data.space_rental_pdf_url || '' }
+  } catch {}
+}
+
+async function saveSettings() {
+  savingSettings.value = true
+  try {
+    await gymSettingsApi.updateSpaceSettings(settings.value)
+    ElMessage.success('租借規則已儲存')
+  } catch {
+    ElMessage.error('儲存失敗')
+  } finally {
+    savingSettings.value = false
+  }
+}
 
 const DAYS = ['日', '一', '二', '三', '四', '五', '六']
 
@@ -104,17 +126,41 @@ function dayLabel(space) {
   return days.map(d => `週${DAYS[d]}`).join('、')
 }
 
-onMounted(load)
+onMounted(() => { load(); loadSettings() })
 </script>
 
 <template>
   <Layout>
-    <div class="max-w-4xl mx-auto space-y-4">
+    <div class="max-w-4xl mx-auto space-y-6">
       <div class="flex items-center justify-between">
         <h1 class="text-xl font-bold text-gray-800">場地管理</h1>
         <el-button type="primary" @click="openCreate" style="background:#16a34a;border-color:#16a34a">
           ＋ 新增場地
         </el-button>
+      </div>
+
+      <!-- 租借規則設定 -->
+      <div class="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
+        <h2 class="font-semibold text-gray-800">📋 租借規則設定</h2>
+        <p class="text-xs text-gray-400">學員點選 LINE 圖文選單「租借場地」時，會先收到此規則訊息。</p>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">規則說明</label>
+          <el-input
+            v-model="settings.space_rental_rules"
+            type="textarea"
+            :rows="4"
+            placeholder="例：租借需提前 24 小時申請，最少租借 1 小時，使用完畢請恢復場地整潔…"
+          />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">規則 PDF 連結（選填）</label>
+          <el-input v-model="settings.space_rental_pdf_url" placeholder="https://..." />
+        </div>
+        <div class="flex justify-end">
+          <el-button :loading="savingSettings" @click="saveSettings" style="background:#7c3aed;border-color:#7c3aed;color:#fff">
+            儲存規則
+          </el-button>
+        </div>
       </div>
 
       <div v-if="!spaces.length" class="text-center py-16 text-gray-400">
