@@ -116,6 +116,14 @@ async function handleTextMessage(event, client, gym) {
   const text = event.message.text.trim()
   const lineUid = event.source.userId
 
+  if (text === '租借場地') {
+    const liffBase = gym.liff_id
+      ? `https://liff.line.me/${gym.liff_id}/space-booking?gym=${gym.id}`
+      : `${process.env.FRONTEND_URL}/space-booking?gym=${gym.id}`
+    await client.replyMessage(event.replyToken, spaceRentalInfoMessage(gym, liffBase))
+    return
+  }
+
   if (text === '我的資訊' || text === '堂數查詢') {
     const { data: member } = await supabase
       .from('members')
