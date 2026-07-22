@@ -6,6 +6,7 @@ import { listPackageTemplates, createPackageTemplate, updatePackageTemplate, del
 import { listCoaches, createCoach, updateCoach, deleteCoach } from '../controllers/coachManageController.js'
 import { listClasses, getClass, createClass, batchCreateClasses, updateClass, deleteClass, updateEnrollmentByCoach } from '../controllers/classController.js'
 import { requireCoach, requireOwner } from '../middlewares/auth.js'
+import { uploadMiddleware, uploadFile } from '../controllers/uploadController.js'
 
 const router = Router()
 
@@ -35,6 +36,7 @@ router.delete('/checkins/:id', deleteCheckin)
 
 router.get('/space-settings', getSpaceSettings)
 router.patch('/space-settings', updateSpaceSettings)
+router.post('/upload', uploadMiddleware, uploadFile)
 
 router.get('/classes', listClasses)
 router.post('/classes/batch', batchCreateClasses)

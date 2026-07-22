@@ -84,6 +84,11 @@ export const spaceApi = {
 export const gymSettingsApi = {
   getSpaceSettings: () => api.get('/api/coach/space-settings'),
   updateSpaceSettings: (data) => api.patch('/api/coach/space-settings', data),
+  uploadPdf: (file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post('/api/coach/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+  },
 }
 
 const opHeaders = () => ({ 'x-operator-password': localStorage.getItem('operator_password') })

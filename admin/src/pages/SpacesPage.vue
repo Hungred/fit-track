@@ -11,6 +11,23 @@ const editingSpace = ref(null)
 
 const settings = ref({ space_rental_rules: '', space_rental_pdf_url: '' })
 const savingSettings = ref(false)
+const uploadingPdf = ref(false)
+
+async function handlePdfUpload(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  uploadingPdf.value = true
+  try {
+    const res = await gymSettingsApi.uploadPdf(file)
+    settings.value.space_rental_pdf_url = res.data.url
+    ElMessage.success('PDF 上傳成功')
+  } catch (err) {
+    ElMessage.error(err.response?.data?.error || 'PDF 上傳失敗')
+  } finally {
+    uploadingPdf.value = false
+    e.target.value = ''
+  }
+}
 
 async function loadSettings() {
   try {
@@ -153,8 +170,21 @@ onMounted(() => { load(); loadSettings() })
           />
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">規則 PDF 連結（選填）</label>
-          <el-input v-model="settings.space_rental_pdf_url" placeholder="https://..." />
+          <label class="block text-sm text-gray-600 mb-1">規則 PDF（選填）</label>
+          <div class="flex items-center gap-3">
+            <label
+              class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+              :class="uploadingPdf && 'opacity-50 pointer-events-none'"
+            >
+              <span>{{ uploadingPdf ? '上傳中...' : '📄 選擇 PDF' }}</span>
+              <input type="file" accept=".pdf" class="hidden" @change="handlePdfUpload" :disabled="uploadingPdf" />
+            </label>
+            <span v-if="settings.space_rental_pdf_url" class="text-xs text-green-600 truncate max-w-xs">
+              ✅ 已上傳
+              <a :href="settings.space_rental_pdf_url" target="_blank" class="underline ml-1">預覽</a>
+            </span>
+            <span v-else class="text-xs text-gray-400">尚未上傳</span>
+          </div>
         </div>
         <div class="flex justify-end">
           <el-button :loading="savingSettings" @click="saveSettings" style="background:#7c3aed;border-color:#7c3aed;color:#fff">
