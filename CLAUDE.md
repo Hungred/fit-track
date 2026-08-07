@@ -8,9 +8,12 @@ LINE 官方帳號健身房簽到管理系統，**多租戶 SaaS 架構**，支�
 
 ```
 fit-track/
-├── backend/     Node.js + Express，部署在 Render
-├── liff/        Vue 3 學員端 LIFF，部署在 Vercel
-└── admin/       Vue 3 教練後台（含 Operator 後台），部署在 Vercel
+├── backend/              Node.js + Express，部署在 Render
+├── liff/                 Vue 3 學員端 LIFF，部署在 Vercel
+├── admin/                Vue 3 教練後台（含 Operator 後台），部署在 Vercel
+└── supabase/
+    └── functions/
+        └── class-reminders/   Supabase Edge Function，課程提醒推播（pg_cron 每 5 分鐘觸發）
 ```
 
 ---
@@ -37,7 +40,7 @@ fit-track/
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 SUPER_ADMIN_PASSWORD=          # 營運方後台密碼（取代舊的 ADMIN_PASSWORD）
-NOTIFY_SECRET=                 # 課程提醒 cron 驗證金鑰（cron-job.org 呼叫 /api/notify/class-reminders 時帶入）
+NOTIFY_SECRET=                 # 課程提醒 cron 驗證金鑰（/api/notify/class-reminders 用，備用）
 FRONTEND_URL=https://fit-track-liff.vercel.app
 ADMIN_URL=https://fit-track-admin.vercel.app
 PORT=3000
@@ -77,6 +80,10 @@ VITE_API_URL=https://fit-track-api-94nn.onrender.com
 | `class_enrollments` | 學員出席記錄，`status` = `pending` / `confirmed` / `leave` / `discuss` / `attended`，`(class_id, member_id)` 唯一鍵，`reminded_at`（TIMESTAMPTZ，推播提醒後寫入，防重複發送） |
 | `spaces` | 可租借場地主檔，`name`、`description`、`price_per_hour`、`capacity`、`available_days`（integer[]，0=日~6=六）、`open_time`/`close_time`（TIME）、`is_active`、`gym_id` |
 | `space_bookings` | 場地預約記錄，`space_id`、`renter_name`、`renter_phone`、`renter_line_uid`、`start_at`/`end_at`（TIMESTAMPTZ，支援跨午夜）、`total_hours`、`total_price`、`status`（`pending`/`confirmed`/`cancelled`）、`notes`、`gym_id` |
+| `group_classes` | 團課主檔，`name`、`coach_id`、`day_of_week`（0=日~6=六）、`start_time`（TIME）、`duration_minutes`、`price_per_term`、`price_per_session`、`sessions_per_term`、`max_students`、`is_active`、`gym_id` |
+| `group_class_terms` | 期別，`group_class_id`、`term_number`（第幾期）、`start_date`（DATE）、`status`（`open` 招生中 / `active` 上課中 / `closed` 結束）、`gym_id` |
+| `group_class_sessions` | 每堂課（開新期時自動產生），`term_id`、`session_number`、`scheduled_at`（TIMESTAMPTZ）、`gym_id` |
+| `group_class_enrollments` | 學員報名，`term_id`、`member_id`（可 null，非會員用 renter_name/phone/line_uid）、`payment_status`（`unpaid`/`paid`）、`gym_id`，`(term_id, member_id)` 唯一鍵 |
 
 **members 表新增欄位**（多教練支援）：`username`（TEXT UNIQUE per gym）、`coach_password`（TEXT，bcrypt hash）、`permissions`（JSONB array）、`is_owner`（BOOLEAN）
 
@@ -174,7 +181,7 @@ DELETE /api/coach/classes/:id                        刪除課程
 GET    /api/classes/:id/ical            下載課程 iCal 檔案
 
 # 課程提醒（不需 x-gym-id，需 ?secret=NOTIFY_SECRET）
-GET    /api/notify/class-reminders      掃描 50–70 分鐘內開始課程，對 confirmed 且 reminded_at IS NULL 的學員推播提醒；由 cron-job.org 每 5 分鐘觸發
+GET    /api/notify/class-reminders      掃描 50–70 分鐘內開始課程，對 confirmed 且 reminded_at IS NULL 的學員推播提醒（備用端點，主要改用 Supabase Edge Function）
 
 # 場地管理（需 x-gym-id）
 GET    /api/spaces                      場地列表（公開，LIFF 可讀）
@@ -185,6 +192,21 @@ GET    /api/spaces/bookings             預約列表（requireCoach，query: mon
 POST   /api/spaces/bookings             送出預約（公開，LIFF 可呼叫）
 PATCH  /api/spaces/bookings/:id         編輯 / 確認 / 取消預約（requireCoach，確認時推播 LINE）
 DELETE /api/spaces/bookings/:id         刪除預約（requireCoach）
+
+# 團課管理（需 x-gym-id）
+GET    /api/group-classes/public                              公開團課列表（LIFF 學員瀏覽，含開放期別）
+POST   /api/group-classes/terms/:termId/enroll               學員報名期別（公開，LIFF 可呼叫）
+GET    /api/group-classes                                     團課列表（requireCoach）
+POST   /api/group-classes                                     新增團課（requireCoach）
+PATCH  /api/group-classes/:id                                更新團課（requireCoach）
+DELETE /api/group-classes/:id                                刪除團課（requireCoach）
+GET    /api/group-classes/:classId/terms                     期別列表（requireCoach）
+POST   /api/group-classes/:classId/terms                     開新期（requireCoach，自動產生 sessions）
+PATCH  /api/group-classes/terms/:termId                      更新期別狀態（requireCoach）
+DELETE /api/group-classes/terms/:termId                      刪除期別（requireCoach）
+GET    /api/group-classes/terms/:termId/enrollments          報名名單（requireCoach）
+PATCH  /api/group-classes/enrollments/:enrollmentId          更新付款狀態（requireCoach）
+DELETE /api/group-classes/enrollments/:enrollmentId          移除報名（requireCoach）
 ```
 
 ---
@@ -196,9 +218,9 @@ DELETE /api/spaces/bookings/:id         刪除預約（requireCoach）
 - `stores/user.js`：`loading` 預設 `true`，避免 LIFF init 完成前 router guard 就跳轉
 - `App.vue`：先判斷 `initError` → `loading` → 才渲染 `RouterView`，解決 Render 冷啟動問題
 - `vercel.json`：SPA routing 需要 rewrites，否則重新整理會 404
-- API 模組：`memberApi`、`checkinApi`、`leaveApi`、`spaceApi`
-- 頁面：`/`（簽到）、`/bind`（綁定）、`/history`（出勤記錄）、`/classes`（我的課程）、`/space-booking`（場地租借）、`/leave`（請假申請）
-- `/space-booking` 允許**未綁定學員**進入（router guard 特例），使用 `liff.getProfile()` 取得 LINE UID
+- API 模組：`memberApi`、`checkinApi`、`leaveApi`、`spaceApi`、`groupClassApi`
+- 頁面：`/`（簽到）、`/bind`（綁定）、`/history`（出勤記錄）、`/classes`（我的課程）、`/space-booking`（場地租借）、`/leave`（請假申請）、`/group-classes`（團課報名）
+- `/space-booking`、`/group-classes` 允許**未綁定學員**進入（router guard 特例），使用 `liff.getProfile()` 取得 LINE UID
 - `/leave` 為獨立請假申請頁，橘色主題，含請假歷史記錄與取消功能
 
 ### Admin（教練後台）
@@ -257,7 +279,7 @@ DELETE /api/spaces/bookings/:id         刪除預約（requireCoach）
 - [x] LIFF 課程清單頁（學員查看即將上課的邀請與狀態，可直接在 LIFF 更改狀態）
 - [x] 課程報名互動：pending 可確認/請假/討論；confirmed 可請假或討論；leave 可改確認或討論；discuss 顯示「等待教練回覆」；attended 不顯示按鈕
 - [x] 打卡自動出席：簽到成功時自動將前後 2 小時內的課程 enrollment 更新為 attended
-- [x] 課程開始前 1 小時推播提醒：`GET /api/notify/class-reminders?secret=NOTIFY_SECRET`，掃描 50–70 分鐘內開始的課程，對 `confirmed` 且 `reminded_at IS NULL` 的學員推播 LINE Flex Message，發送後寫入 `reminded_at` 防重複；由 cron-job.org 每 5 分鐘觸發
+- [x] 課程開始前 1 小時推播提醒：Supabase Edge Function `class-reminders` + pg_cron 每 5 分鐘觸發，掃描 50–70 分鐘內開始的課程，對 `confirmed` 且 `reminded_at IS NULL` 的學員推播 LINE Flex Message，發送後寫入 `reminded_at` 防重複；不經過 Render，不受冷啟動或 GitHub Actions 排程不穩影響。備用端點：`GET /api/notify/class-reminders?secret=NOTIFY_SECRET`
 - [x] LINE 按鈕重複點擊防護：已回覆過（非 pending）時回覆提示訊息，attended 顯示「已完成打卡」
 - [x] Admin 課程詳情：教練可用下拉選單直接修改學員出席狀態
 - [x] LIFF 圖文選單（立即簽到、我的堂數、出勤記錄、我的課程 四格）
@@ -266,6 +288,7 @@ DELETE /api/spaces/bookings/:id         刪除預約（requireCoach）
 - [x] 場地租借系統：`spaces` + `space_bookings` 資料表；Admin 後台 SpacesPage（場地 CRUD）與 SpaceBookingsPage（預約管理、確認推播 LINE）；ClassesPage 月曆整合場地預約（紫色事件）；LIFF `/space-booking` 4 步驟預約流程（選場地→選時間→填資料→成功），允許未綁定學員操作
 - [x] LIFF `/leave` 獨立請假申請頁（橘色主題，含請假表單、歷史記錄、取消功能）
 - [x] LINE 圖文選單更新為 2×3（6 格）：立即簽到、我的堂數、租借場地、出勤記錄、我的課程、請假申請；PNG 檔在 `~/Desktop/fit_track_richmenu.png`（2500×1686px，Python Pillow 產生，暖棕/米白棋盤格設計）
+- [x] 團課管理系統：`group_classes`、`group_class_terms`、`group_class_sessions`、`group_class_enrollments` 4 張資料表；Admin 後台 GroupClassesPage（3 欄：團課→期別→報名名單，開新期自動產生 sessions，付款狀態標記）；LIFF `/group-classes` 學員瀏覽報名頁（支援未綁定學員）；圖文選單右下角規劃改為「團課報名」（PNG 尚未更新）
 
 ---
 
@@ -328,5 +351,7 @@ DELETE /api/spaces/bookings/:id         刪除預約（requireCoach）
 23. **LIFF 圖文選單深層連結不能用 hash**：`liff.line.me/{id}?gym=xxx#/classes` 中的 `#/classes` 是 `liff.line.me` 的 hash fragment，LIFF redirect 時不會轉發給 app，WebView 永遠開在 `/`。正確格式：`liff.line.me/{id}/classes?gym=xxx`（路徑放在 liffId 後面）
 24. **LIFF init 後 URL 還原在 Vue Router 外部**：LIFF SDK 在 `init()` 完成後用 `history.pushState` 把 `/?liff.state=%2Fclasses` 還原成 `/classes`，但這個動作繞過 Vue Router，router 仍停在 `/`。解法：`await initLiff()` 之後主動 `router.push(window.location.pathname)` 讓 router 跟上還原後的路徑
 25. **Render 免費方案暫停（x-render-routing: no-deploy）**：Render 免費服務被 suspend（非冷啟動）時回傳此 header，cron job 全部失敗。需到 Render Dashboard → Resume Service 或手動 Deploy 才能喚醒
+28. **GitHub Actions 排程不可靠**：`schedule: cron` 在 GitHub Actions 常有數小時延誤，不適合 5 分鐘觸發的課程提醒。已改用 Supabase Edge Function + pg_cron（資料庫層排程，可靠且不依賴 Render）
+29. **Supabase API Key 新舊格式不一致**：Supabase 已將 API key 改為新格式（`sb_secret_...`），但舊 JWT 格式（`eyJ...`）仍存在 Legacy 分頁。Edge Function 內部注入的 `SUPABASE_SERVICE_ROLE_KEY` 是新格式；pg_cron SQL 的 Authorization header 必須用同一格式才能通過驗證
 26. **場地預約跨午夜時間計算**：`end - start` 結果為負（如 21:00→00:00 = -21h），要 `if (diff <= 0) diff += 24 * 60` 修正；`end_at` 的日期也要用隔天的日期，否則 start_at > end_at 導致資料庫衝突偵測失效
 27. **Grid 子元素 overflow 溢出**：CSS Grid 預設子元素 `min-width: auto`，內容過長時會撐破格線。在 grid 子元素加 `min-w-0` 讓其可以縮小至 0，解決半寬輸入框在手機上重疊的問題

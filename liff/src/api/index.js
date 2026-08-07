@@ -35,6 +35,11 @@ export const spaceApi = {
   createBooking: (data) => api.post('/api/spaces/bookings', data),
 }
 
+export const groupClassApi = {
+  listPublic: () => api.get('/api/group-classes/public'),
+  enroll: (termId, data) => api.post(`/api/group-classes/terms/${termId}/enroll`, data),
+}
+
 export const classApi = {
   getMyClasses: () => api.get('/api/members/me/classes'),
   updateMyEnrollment: (classId, status) => api.patch(`/api/members/me/classes/${classId}`, { status }),

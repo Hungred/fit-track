@@ -81,6 +81,22 @@ export const spaceApi = {
   deleteBooking: (id) => api.delete(`/api/spaces/bookings/${id}`),
 }
 
+export const groupClassApi = {
+  list: () => api.get('/api/group-classes'),
+  create: (data) => api.post('/api/group-classes', data),
+  update: (id, data) => api.patch(`/api/group-classes/${id}`, data),
+  delete: (id) => api.delete(`/api/group-classes/${id}`),
+
+  listTerms: (classId) => api.get(`/api/group-classes/${classId}/terms`),
+  createTerm: (classId, data) => api.post(`/api/group-classes/${classId}/terms`, data),
+  updateTerm: (termId, data) => api.patch(`/api/group-classes/terms/${termId}`, data),
+  deleteTerm: (termId) => api.delete(`/api/group-classes/terms/${termId}`),
+
+  listEnrollments: (termId) => api.get(`/api/group-classes/terms/${termId}/enrollments`),
+  updateEnrollment: (id, data) => api.patch(`/api/group-classes/enrollments/${id}`, data),
+  deleteEnrollment: (id) => api.delete(`/api/group-classes/enrollments/${id}`),
+}
+
 export const gymSettingsApi = {
   getSpaceSettings: () => api.get('/api/coach/space-settings'),
   updateSpaceSettings: (data) => api.patch('/api/coach/space-settings', data),

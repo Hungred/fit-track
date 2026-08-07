@@ -1,9 +1,7 @@
 name: Class Reminders
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'
-  workflow_dispatch:
+  workflow_dispatch: # 已改用 Supabase Edge Function + pg_cron，保留手動觸發供測試
 
 jobs:
   notify:
