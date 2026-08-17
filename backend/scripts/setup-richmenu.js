@@ -85,10 +85,10 @@ async function main() {
         bounds: { x: 0, y: 843, width: 833, height: 843 },
         action: { type: 'message', text: COMING_SOON },
       },
-      // ④ 私人課程（中下）暫停用
+      // ④ 私人課程（中下）
       {
         bounds: { x: 833, y: 843, width: 833, height: 843 },
-        action: { type: 'message', text: COMING_SOON },
+        action: { type: 'uri', uri: `${LIFF}/private-lessons?gym=${GYM_ID}` },
       },
       // ⑤ 場地介紹（右側全高）暫停用
       {
