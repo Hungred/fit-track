@@ -451,9 +451,9 @@ onMounted(async () => {
               <p v-if="req.notes" class="text-sm text-gray-500">備注：{{ req.notes }}</p>
               <p class="text-xs text-gray-300">申請於 {{ dayjs(req.created_at).format('MM/DD HH:mm') }}</p>
             </div>
-            <div class="flex flex-col gap-2 shrink-0">
-              <el-button type="primary" size="small" @click="openConfirm(req)" style="background:#16a34a;border-color:#16a34a">確認排課</el-button>
-              <el-button size="small" type="danger" plain @click="declineRequest(req)">婉拒</el-button>
+            <div class="flex flex-col gap-2 shrink-0 w-20">
+              <el-button type="primary" size="small" @click="openConfirm(req)" style="background:#16a34a;border-color:#16a34a;width:100%">確認排課</el-button>
+              <el-button size="small" type="danger" plain @click="declineRequest(req)" style="width:100%;margin-left:0">婉拒</el-button>
             </div>
           </div>
         </div>
