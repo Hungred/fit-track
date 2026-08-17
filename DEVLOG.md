@@ -9,6 +9,8 @@ LINE 官方帳號健身房管理系統（多租戶 SaaS）的完整開發紀錄�
 ## 近期更新
 
 <!-- LOG_START -->
+### 2026-08-17
+- docs: 新增 DEVLOG 開發日誌 + 自動更新 GitHub Actions
 <!-- LOG_END -->
 
 ---
