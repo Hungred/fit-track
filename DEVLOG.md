@@ -10,6 +10,7 @@ LINE 官方帳號健身房管理系統（多租戶 SaaS）的完整開發紀錄�
 
 <!-- LOG_START -->
 ### 2026-08-17
+- fix: 待確認申請按鈕寬度統一
 - feat: 私人課程申請通知改為 Flex Message，附後台處理連結
 - fix: requireMember 與 webhook 查詢加 role=member，避免同 UID 兼任學員教練時 .single() 失敗
 - feat: 教練 LINE UID 綁定（webhook我的ID + Admin手動填寫 + 一次性綁定連結）
