@@ -1,22 +1,26 @@
 import supabase from '../lib/supabase.js'
 
 export async function listPackageTemplates(req, res) {
-  const { data, error } = await supabase
+  const { category } = req.query
+  let query = supabase
     .from('packages')
     .select('*')
     .eq('gym_id', req.gym.id)
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: true })
 
+  if (category && category !== 'all') query = query.eq('category', category)
+
+  const { data, error } = await query
   if (error) return res.status(500).json({ error: error.message })
   res.json({ packages: data })
 }
 
 export async function createPackageTemplate(req, res) {
-  const { name, total_sessions, price_per_session, price_total, valid_days } = req.body
+  const { name, total_sessions, price_per_session, price_total, valid_days, category } = req.body
 
   const { data, error } = await supabase
     .from('packages')
-    .insert({ name, total_sessions, price_per_session, price_total, valid_days, gym_id: req.gym.id })
+    .insert({ name, total_sessions, price_per_session, price_total, valid_days, category: category || 'general', gym_id: req.gym.id })
     .select()
     .single()
 
@@ -26,11 +30,14 @@ export async function createPackageTemplate(req, res) {
 
 export async function updatePackageTemplate(req, res) {
   const { id } = req.params
-  const { name, total_sessions, price_per_session, price_total, valid_days } = req.body
+  const { name, total_sessions, price_per_session, price_total, valid_days, category } = req.body
+
+  const updates = { name, total_sessions, price_per_session, price_total, valid_days }
+  if (category) updates.category = category
 
   const { data, error } = await supabase
     .from('packages')
-    .update({ name, total_sessions, price_per_session, price_total, valid_days })
+    .update(updates)
     .eq('id', id)
     .eq('gym_id', req.gym.id)
     .select()
