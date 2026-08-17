@@ -13,6 +13,7 @@ import operatorRouter from './routes/operator.js'
 import notifyRouter from './routes/notify.js'
 import spacesRouter from './routes/spaces.js'
 import groupClassRouter from './routes/groupClass.js'
+import coachBindRouter from './routes/coachBind.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -43,6 +44,7 @@ app.use('/api/checkin', requireGym, checkinRouter)
 app.use('/api/coach', requireGym, coachRouter)
 app.use('/api/spaces', requireGym, spacesRouter)
 app.use('/api/group-classes', requireGym, groupClassRouter)
+app.use('/api/coach-bind', requireGym, coachBindRouter)
 
 app.listen(PORT, () => {
   console.log(`Fit Track API running on port ${PORT}`)

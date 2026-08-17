@@ -30,7 +30,7 @@ async function bootstrap() {
     await store.init()
     if (!store.initError) {
       const targetPath = window.location.pathname || '/'
-      const noAuthPaths = ['/space-booking', '/group-classes']
+      const noAuthPaths = ['/space-booking', '/group-classes', '/coach-bind']
       if (!store.member && !noAuthPaths.includes(targetPath)) {
         await router.push('/bind')
       } else {

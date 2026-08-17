@@ -74,6 +74,7 @@ export const coachManageApi = {
   create: (data) => api.post('/api/coach/coaches', data),
   update: (id, data) => api.patch(`/api/coach/coaches/${id}`, data),
   delete: (id) => api.delete(`/api/coach/coaches/${id}`),
+  generateBindToken: (id) => api.post(`/api/coach/coaches/${id}/bind-token`),
 }
 
 export const spaceApi = {

@@ -3,7 +3,7 @@ import { getDashboard, getAllCheckins, generateQrToken, getMonthlyReport, getSpa
 import { updateCheckin, deleteCheckin } from '../controllers/checkinController.js'
 import { getTodayLeaves } from '../controllers/leaveController.js'
 import { listPackageTemplates, createPackageTemplate, updatePackageTemplate, deletePackageTemplate, assignPackage, adjustSessions, updateMemberPackage, deleteMemberPackage } from '../controllers/packageController.js'
-import { listCoaches, createCoach, updateCoach, deleteCoach } from '../controllers/coachManageController.js'
+import { listCoaches, createCoach, updateCoach, deleteCoach, generateBindToken } from '../controllers/coachManageController.js'
 import { listClasses, getClass, createClass, batchCreateClasses, updateClass, deleteClass, updateEnrollmentByCoach } from '../controllers/classController.js'
 import { listRequests, confirmRequest, declineRequest } from '../controllers/classRequestController.js'
 import { requireCoach, requireOwner } from '../middlewares/auth.js'
@@ -17,6 +17,7 @@ router.get('/coaches', listCoaches)
 router.post('/coaches', requireOwner, createCoach)
 router.patch('/coaches/:id', requireOwner, updateCoach)
 router.delete('/coaches/:id', requireOwner, deleteCoach)
+router.post('/coaches/:id/bind-token', requireOwner, generateBindToken)
 
 router.get('/dashboard', getDashboard)
 router.get('/checkins', getAllCheckins)

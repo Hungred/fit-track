@@ -10,6 +10,7 @@ const routes = [
   { path: '/leave', component: () => import('../pages/LeavePage.vue') },
   { path: '/group-classes', component: () => import('../pages/GroupClassesPage.vue') },
   { path: '/private-lessons', component: () => import('../pages/PrivateLessonsPage.vue') },
+  { path: '/coach-bind', component: () => import('../pages/CoachBindPage.vue') },
 ]
 
 const router = createRouter({
@@ -23,7 +24,7 @@ router.beforeEach(async (to) => {
   // 初始化中或有錯誤時不做跳轉，由 App.vue 顯示對應畫面
   if (store.loading || store.initError) return
 
-  if (!store.member && to.path !== '/bind' && to.path !== '/space-booking' && to.path !== '/group-classes') {
+  if (!store.member && to.path !== '/bind' && to.path !== '/space-booking' && to.path !== '/group-classes' && to.path !== '/coach-bind') {
     return '/bind'
   }
   if (store.member && to.path === '/bind') {

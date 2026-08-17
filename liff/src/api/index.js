@@ -49,3 +49,7 @@ export const classRequestApi = {
   submit: (data) => api.post('/api/members/me/class-requests', data),
   listCoaches: () => api.get('/api/members/coaches'),
 }
+
+export const coachBindApi = {
+  bind: (token, line_uid) => api.post('/api/coach-bind', { token, line_uid }),
+}

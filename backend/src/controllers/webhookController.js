@@ -124,6 +124,14 @@ async function handleTextMessage(event, client, gym) {
     return
   }
 
+  if (text === '我的ID') {
+    await client.replyMessage(event.replyToken, {
+      type: 'text',
+      text: `你的 LINE UID 是：\n${lineUid}\n\n請複製此 UID 給管理員設定教練帳號。`,
+    })
+    return
+  }
+
   if (text === '我的資訊' || text === '堂數查詢') {
     const { data: member } = await supabase
       .from('members')

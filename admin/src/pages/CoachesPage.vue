@@ -54,7 +54,8 @@ const ALL_PERMS = PERMISSION_GROUPS.flatMap(g => g.items.map(i => i.key))
 const PRESET_FULL = ALL_PERMS.filter(k => !k.startsWith('coaches:'))
 const PRESET_BASIC = ['dashboard:view', 'dashboard:checkin_manual', 'members:list', 'members:view', 'qr:generate']
 
-const emptyForm = () => ({ name: '', username: '', password: '', confirm: '', permissions: [] })
+const generatingToken = ref(null)
+const emptyForm = () => ({ name: '', username: '', password: '', confirm: '', permissions: [], line_uid: '' })
 const form = ref(emptyForm())
 
 async function fetchCoaches() {
@@ -77,8 +78,31 @@ function openCreate() {
 
 function openEdit(coach) {
   editingCoach.value = coach
-  form.value = { name: coach.name, username: coach.username, password: '', confirm: '', permissions: [...(coach.permissions || [])] }
+  const isRealUid = coach.line_uid && /^U[0-9a-f]{32}$/.test(coach.line_uid)
+  form.value = {
+    name: coach.name,
+    username: coach.username,
+    password: '',
+    confirm: '',
+    permissions: [...(coach.permissions || [])],
+    line_uid: isRealUid ? coach.line_uid : '',
+  }
   showForm.value = true
+}
+
+async function generateBindLink(coach) {
+  generatingToken.value = coach.id
+  try {
+    const res = await coachManageApi.generateBindToken(coach.id)
+    const { url, token } = res.data
+    const link = url || `（token: ${token}，請手動組 LIFF URL）`
+    await navigator.clipboard.writeText(link)
+    ElMessage.success('綁定連結已複製到剪貼板！有效 24 小時。')
+  } catch (err) {
+    ElMessage.error(err.response?.data?.error || '產生失敗')
+  } finally {
+    generatingToken.value = null
+  }
 }
 
 function applyPreset(preset) {
@@ -109,6 +133,7 @@ async function submitForm() {
       permissions: form.value.permissions,
     }
     if (form.value.password) payload[editingCoach.value ? 'new_password' : 'password'] = form.value.password
+    if (editingCoach.value) payload.line_uid = form.value.line_uid
 
     if (editingCoach.value) {
       await coachManageApi.update(editingCoach.value.id, payload)
@@ -186,7 +211,13 @@ onMounted(fetchCoaches)
               </td>
               <td class="px-5 py-3.5 text-gray-500">{{ coach.is_owner ? '全部' : `${(coach.permissions || []).length} 項` }}</td>
               <td class="px-5 py-3.5 text-right">
-                <div class="flex gap-2 justify-end">
+                <div class="flex gap-2 justify-end flex-wrap">
+                  <el-button
+                    v-if="auth.hasPermission('coaches:edit') && auth.isOwner"
+                    size="small"
+                    :loading="generatingToken === coach.id"
+                    @click="generateBindLink(coach)"
+                  >產生綁定連結</el-button>
                   <el-button v-if="auth.hasPermission('coaches:edit')" size="small" @click="openEdit(coach)">編輯</el-button>
                   <el-button
                     v-if="auth.hasPermission('coaches:delete') && !coach.is_owner && coach.id !== auth.lineUid"
@@ -219,7 +250,13 @@ onMounted(fetchCoaches)
             </div>
             <p class="text-xs text-gray-400 mt-0.5">{{ coach.username }}・{{ coach.is_owner ? '全部權限' : `${(coach.permissions || []).length} 項權限` }}</p>
           </div>
-          <div class="flex gap-2 flex-shrink-0">
+          <div class="flex gap-2 flex-shrink-0 flex-wrap justify-end">
+            <el-button
+              v-if="auth.hasPermission('coaches:edit') && auth.isOwner"
+              size="small"
+              :loading="generatingToken === coach.id"
+              @click="generateBindLink(coach)"
+            >綁定連結</el-button>
             <el-button v-if="auth.hasPermission('coaches:edit')" size="small" @click="openEdit(coach)">編輯</el-button>
             <el-button
               v-if="auth.hasPermission('coaches:delete') && !coach.is_owner && coach.id !== auth.lineUid"
@@ -253,6 +290,13 @@ onMounted(fetchCoaches)
             <label class="block text-sm text-gray-600 mb-1">確認密碼</label>
             <el-input v-model="form.confirm" type="password" show-password placeholder="再輸入一次" />
           </div>
+        </div>
+
+        <!-- LINE UID（編輯時顯示） -->
+        <div v-if="editingCoach">
+          <label class="block text-sm text-gray-600 mb-1">LINE UID</label>
+          <el-input v-model="form.line_uid" placeholder="U 開頭 33 個字元，留空清除" />
+          <p class="text-xs text-gray-400 mt-1">教練在 LINE 傳「我的ID」即可取得，或用「產生綁定連結」讓教練自行綁定</p>
         </div>
 
         <!-- 權限 -->
