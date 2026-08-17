@@ -23,18 +23,21 @@ async function bootstrap() {
 
   // LIFF init 完成後 URL params 才正確還原
   const store = useUserStore()
-  const params = new URLSearchParams(window.location.search)
-  const gymId = params.get('gym') || localStorage.getItem('gym_id')
+  const searchParams = new URLSearchParams(window.location.search)
+  const gymId = searchParams.get('gym') || localStorage.getItem('gym_id')
   if (gymId) {
     store.setGym(gymId)
     await store.init()
     if (!store.initError) {
       const targetPath = window.location.pathname || '/'
+      // 保留 query 參數（gym 已另外處理，移除避免重複）
+      searchParams.delete('gym')
+      const query = Object.fromEntries(searchParams)
       const noAuthPaths = ['/space-booking', '/group-classes', '/coach-bind']
       if (!store.member && !noAuthPaths.includes(targetPath)) {
         await router.push('/bind')
       } else {
-        await router.push(targetPath)
+        await router.push({ path: targetPath, query: Object.keys(query).length ? query : undefined })
       }
     }
   } else {

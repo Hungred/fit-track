@@ -42,11 +42,13 @@ export async function generateQrToken(req, res) {
 
   if (error) return res.status(500).json({ error: error.message })
 
-  const liffUrl = process.env.LIFF_URL || 'https://fit-track-liff.vercel.app'
+  const base = req.gym.liff_id
+    ? `https://liff.line.me/${req.gym.liff_id}`
+    : (process.env.LIFF_URL || 'https://fit-track-liff.vercel.app')
   res.json({
     token,
     expires_at: expiresAt.toISOString(),
-    qr_url: `${liffUrl}/?gym=${req.gym.id}&token=${token}`,
+    qr_url: `${base}/?gym=${req.gym.id}&token=${token}`,
   })
 }
 
