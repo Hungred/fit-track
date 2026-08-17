@@ -10,6 +10,7 @@ LINE 官方帳號健身房管理系統（多租戶 SaaS）的完整開發紀錄�
 
 <!-- LOG_START -->
 ### 2026-08-17
+- feat: 私人課程申請功能 — 學員 LIFF 申請 + 教練後台確認排課
 - docs: 新增 DEVLOG 開發日誌 + 自動更新 GitHub Actions
 <!-- LOG_END -->
 
