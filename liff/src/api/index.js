@@ -47,4 +47,5 @@ export const classApi = {
 
 export const classRequestApi = {
   submit: (data) => api.post('/api/members/me/class-requests', data),
+  listCoaches: () => api.get('/api/members/coaches'),
 }

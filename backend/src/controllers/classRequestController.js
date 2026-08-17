@@ -2,38 +2,38 @@ import supabase from '../lib/supabase.js'
 import { pushMessage, classInviteMessage } from '../lib/line.js'
 
 export async function submitRequest(req, res) {
-  const { preferred_dates, notes } = req.body
+  const { preferred_dates, notes, coach_id } = req.body
   if (!preferred_dates?.length) return res.status(400).json({ error: '請至少填寫一個希望時間' })
+  if (!coach_id) return res.status(400).json({ error: '請選擇教練' })
 
   const { data, error } = await supabase
     .from('class_requests')
-    .insert({ gym_id: req.gym.id, member_id: req.member.id, preferred_dates, notes: notes || null })
+    .insert({ gym_id: req.gym.id, member_id: req.member.id, coach_id, preferred_dates, notes: notes || null })
     .select()
     .single()
 
   if (error) return res.status(500).json({ error: error.message })
 
-  // 推播給所有教練
-  const { data: coaches } = await supabase
+  // 只推播給指定教練
+  const { data: coach } = await supabase
     .from('members')
     .select('line_uid')
+    .eq('id', coach_id)
     .eq('gym_id', req.gym.id)
-    .eq('role', 'coach')
-    .not('line_uid', 'is', null)
+    .single()
 
   const token = req.gym.line_channel_access_token
-  if (coaches?.length && token) {
+  if (coach?.line_uid && token) {
     const dates = preferred_dates
       .map(d => new Date(d).toLocaleString('zh-TW', {
         timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric',
         hour: '2-digit', minute: '2-digit',
       }))
       .join('、')
-    const msg = {
+    await pushMessage(coach.line_uid, [{
       type: 'text',
       text: `📩 ${req.member.name} 申請了私人課程\n\n希望時間：${dates}${notes ? `\n備注：${notes}` : ''}\n\n請至後台「排課管理 → 待確認申請」處理`,
-    }
-    await Promise.allSettled(coaches.map(c => pushMessage(c.line_uid, [msg], token)))
+    }], token)
   }
 
   res.json({ request: data })
@@ -43,7 +43,7 @@ export async function listRequests(req, res) {
   const { status = 'pending' } = req.query
   const { data, error } = await supabase
     .from('class_requests')
-    .select('*, member:member_id(id, name, phone)')
+    .select('*, member:member_id(id, name, phone), coach:coach_id(id, name)')
     .eq('gym_id', req.gym.id)
     .eq('status', status)
     .order('created_at', { ascending: false })
@@ -71,7 +71,7 @@ export async function confirmRequest(req, res) {
     .from('classes')
     .insert({
       gym_id: req.gym.id,
-      coach_id: req.member.id,
+      coach_id: request.coach_id || req.member.id,
       title: title || '私人課程',
       start_at,
       end_at: end_at || null,

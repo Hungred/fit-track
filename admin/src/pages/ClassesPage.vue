@@ -441,6 +441,7 @@ onMounted(async () => {
               <p class="font-semibold text-gray-800">{{ req.member?.name }}
                 <span v-if="req.member?.phone" class="text-sm font-normal text-gray-400 ml-1">{{ req.member.phone }}</span>
               </p>
+              <p class="text-sm text-gray-500">指定教練：{{ req.coach?.name || '—' }}</p>
               <div class="text-sm text-gray-500 space-y-0.5">
                 <p class="font-medium text-gray-600">希望時間：</p>
                 <p v-for="(d, i) in req.preferred_dates" :key="i">

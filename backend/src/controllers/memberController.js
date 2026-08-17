@@ -34,6 +34,18 @@ export async function getMe(req, res) {
   res.json({ member: req.member, packages })
 }
 
+export async function listCoachesForMember(req, res) {
+  const { data, error } = await supabase
+    .from('members')
+    .select('id, name')
+    .eq('gym_id', req.gym.id)
+    .eq('role', 'coach')
+    .order('created_at', { ascending: true })
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.json({ coaches: data })
+}
+
 export async function getCheckinHistory(req, res) {
   const { month } = req.query
 

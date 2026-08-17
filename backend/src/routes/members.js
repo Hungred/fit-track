@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { bindMember, getMe, getCheckinHistory } from '../controllers/memberController.js'
+import { bindMember, getMe, getCheckinHistory, listCoachesForMember } from '../controllers/memberController.js'
 import { requestLeave, cancelLeave, getMyLeaves } from '../controllers/leaveController.js'
 import { getMemberClasses, updateMemberEnrollment } from '../controllers/classController.js'
 import { submitRequest } from '../controllers/classRequestController.js'
@@ -8,6 +8,7 @@ import { requireMember } from '../middlewares/auth.js'
 const router = Router()
 
 router.post('/bind', bindMember)
+router.get('/coaches', requireMember, listCoachesForMember)
 router.get('/me', requireMember, getMe)
 router.get('/me/checkins', requireMember, getCheckinHistory)
 router.get('/me/leaves', requireMember, getMyLeaves)

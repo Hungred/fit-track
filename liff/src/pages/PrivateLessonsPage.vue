@@ -1,15 +1,27 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { classRequestApi } from '../api/index.js'
 import dayjs from 'dayjs'
 
 const today = dayjs().format('YYYY-MM-DD')
 
+const coaches = ref([])
+const selectedCoach = ref(null)
 const slots = ref([{ date: today, time: '09:00' }])
 const notes = ref('')
 const submitting = ref(false)
 const submitted = ref(false)
 const error = ref('')
+const loading = ref(true)
+
+onMounted(async () => {
+  try {
+    const res = await classRequestApi.listCoaches()
+    coaches.value = res.data.coaches || []
+  } finally {
+    loading.value = false
+  }
+})
 
 function addSlot() {
   if (slots.value.length >= 3) return
@@ -22,13 +34,14 @@ function removeSlot(i) {
 }
 
 async function submit() {
+  if (!selectedCoach.value) { error.value = '請選擇教練'; return }
   const filled = slots.value.filter(s => s.date && s.time)
   if (!filled.length) { error.value = '請填寫希望上課時間'; return }
   error.value = ''
   submitting.value = true
   try {
     const preferred_dates = filled.map(s => `${s.date}T${s.time}:00+08:00`)
-    await classRequestApi.submit({ preferred_dates, notes: notes.value || null })
+    await classRequestApi.submit({ coach_id: selectedCoach.value, preferred_dates, notes: notes.value || null })
     submitted.value = true
   } catch (err) {
     error.value = err.response?.data?.error || '送出失敗，請稍後再試'
@@ -43,7 +56,7 @@ async function submit() {
     <!-- Header -->
     <div class="bg-green-700 text-white px-5 pt-14 pb-5">
       <h1 class="text-xl font-bold">私人課程申請</h1>
-      <p class="text-sm text-green-200 mt-1">填寫希望上課的時間，教練確認後會通知你</p>
+      <p class="text-sm text-green-200 mt-1">選擇教練與希望上課的時間，確認後會通知你</p>
     </div>
 
     <!-- 送出成功 -->
@@ -53,13 +66,39 @@ async function submit() {
       <p class="text-gray-500 text-sm">教練確認時間後，你會收到 LINE 通知。</p>
     </div>
 
+    <div v-else-if="loading" class="text-center py-20 text-gray-400">載入中…</div>
+
     <!-- 表單 -->
-    <div v-else class="px-5 py-6 space-y-6 max-w-lg mx-auto">
+    <div v-else class="px-5 py-6 space-y-5 max-w-lg mx-auto">
+
+      <!-- 選教練 -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm">
+        <p class="font-semibold text-gray-700 mb-3">選擇教練 <span class="text-red-400">*</span></p>
+        <div class="space-y-2">
+          <button
+            v-for="coach in coaches" :key="coach.id"
+            @click="selectedCoach = coach.id"
+            class="w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition text-left"
+            :class="selectedCoach === coach.id
+              ? 'border-green-600 bg-green-50'
+              : 'border-gray-100 bg-gray-50'"
+          >
+            <div class="w-9 h-9 rounded-full bg-green-700 text-white flex items-center justify-center font-bold text-sm shrink-0">
+              {{ coach.name.charAt(0) }}
+            </div>
+            <span class="font-medium text-gray-800">{{ coach.name }}</span>
+            <span v-if="selectedCoach === coach.id" class="ml-auto text-green-600 text-lg">✓</span>
+          </button>
+          <p v-if="!coaches.length" class="text-sm text-gray-400 text-center py-3">暫無可選教練</p>
+        </div>
+      </div>
 
       <!-- 希望時間 -->
       <div class="bg-white rounded-2xl p-5 shadow-sm space-y-4">
-        <p class="font-semibold text-gray-700">希望上課時間 <span class="text-red-400">*</span></p>
-        <p class="text-xs text-gray-400 -mt-2">可填最多 3 個備選時間</p>
+        <div>
+          <p class="font-semibold text-gray-700">希望上課時間 <span class="text-red-400">*</span></p>
+          <p class="text-xs text-gray-400 mt-0.5">可填最多 3 個備選時間</p>
+        </div>
 
         <div v-for="(slot, i) in slots" :key="i" class="flex items-center gap-2">
           <div class="flex-1 grid grid-cols-2 gap-2">
@@ -78,7 +117,7 @@ async function submit() {
           <button
             v-if="slots.length > 1"
             @click="removeSlot(i)"
-            class="text-gray-300 hover:text-red-400 text-xl leading-none flex-shrink-0"
+            class="text-gray-300 hover:text-red-400 text-xl leading-none shrink-0"
           >✕</button>
         </div>
 
