@@ -5,6 +5,7 @@ import { getTodayLeaves } from '../controllers/leaveController.js'
 import { listPackageTemplates, createPackageTemplate, updatePackageTemplate, deletePackageTemplate, assignPackage, adjustSessions, updateMemberPackage, deleteMemberPackage } from '../controllers/packageController.js'
 import { listCoaches, createCoach, updateCoach, deleteCoach } from '../controllers/coachManageController.js'
 import { listClasses, getClass, createClass, batchCreateClasses, updateClass, deleteClass, updateEnrollmentByCoach } from '../controllers/classController.js'
+import { listRequests, confirmRequest, declineRequest } from '../controllers/classRequestController.js'
 import { requireCoach, requireOwner } from '../middlewares/auth.js'
 import { uploadMiddleware, uploadFile } from '../controllers/uploadController.js'
 
@@ -37,6 +38,10 @@ router.delete('/checkins/:id', deleteCheckin)
 router.get('/space-settings', getSpaceSettings)
 router.patch('/space-settings', updateSpaceSettings)
 router.post('/upload', uploadMiddleware, uploadFile)
+
+router.get('/class-requests', listRequests)
+router.post('/class-requests/:id/confirm', confirmRequest)
+router.post('/class-requests/:id/decline', declineRequest)
 
 router.get('/classes', listClasses)
 router.post('/classes/batch', batchCreateClasses)

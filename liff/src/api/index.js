@@ -44,3 +44,7 @@ export const classApi = {
   getMyClasses: () => api.get('/api/members/me/classes'),
   updateMyEnrollment: (classId, status) => api.patch(`/api/members/me/classes/${classId}`, { status }),
 }
+
+export const classRequestApi = {
+  submit: (data) => api.post('/api/members/me/class-requests', data),
+}

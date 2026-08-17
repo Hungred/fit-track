@@ -9,6 +9,7 @@ const routes = [
   { path: '/space-booking', component: () => import('../pages/SpaceBookingPage.vue') },
   { path: '/leave', component: () => import('../pages/LeavePage.vue') },
   { path: '/group-classes', component: () => import('../pages/GroupClassesPage.vue') },
+  { path: '/private-lessons', component: () => import('../pages/PrivateLessonsPage.vue') },
 ]
 
 const router = createRouter({

@@ -52,6 +52,12 @@ export const coachApi = {
   getTodayLeaves: () => api.get('/api/coach/leaves'),
 }
 
+export const classRequestApi = {
+  list: (status = 'pending') => api.get('/api/coach/class-requests', { params: { status } }),
+  confirm: (id, data) => api.post(`/api/coach/class-requests/${id}/confirm`, data),
+  decline: (id) => api.post(`/api/coach/class-requests/${id}/decline`),
+}
+
 export const classApi = {
   list: (month) => api.get('/api/coach/classes', { params: { month } }),
   get: (id) => api.get(`/api/coach/classes/${id}`),

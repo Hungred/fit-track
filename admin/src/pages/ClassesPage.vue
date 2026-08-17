@@ -5,7 +5,7 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
-import { classApi, coachApi, spaceApi } from '../api/index.js'
+import { classApi, classRequestApi, coachApi, spaceApi } from '../api/index.js'
 import { useAuthStore } from '../stores/auth.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Layout from '../components/Layout.vue'
@@ -15,6 +15,76 @@ const auth = useAuthStore()
 const calendarRef = ref(null)
 const members = ref([])
 const showForm = ref(false)
+
+// 申請列表
+const activeTab = ref('calendar') // 'calendar' | 'requests'
+const requests = ref([])
+const requestsLoading = ref(false)
+const showConfirmDialog = ref(false)
+const confirmingRequest = ref(null)
+const confirmForm = ref({ date: '', start_time: '', end_time: '', title: '私人課程', notes: '' })
+const confirming = ref(false)
+
+async function fetchRequests() {
+  requestsLoading.value = true
+  try {
+    const res = await classRequestApi.list('pending')
+    requests.value = res.data.requests || []
+  } finally {
+    requestsLoading.value = false
+  }
+}
+
+function openConfirm(req) {
+  confirmingRequest.value = req
+  const firstDate = req.preferred_dates?.[0]
+  const d = firstDate ? dayjs(firstDate) : dayjs()
+  confirmForm.value = {
+    date: d.format('YYYY-MM-DD'),
+    start_time: d.format('HH:mm'),
+    end_time: d.add(1, 'hour').format('HH:mm'),
+    title: '私人課程',
+    notes: '',
+  }
+  showConfirmDialog.value = true
+}
+
+async function submitConfirm() {
+  if (!confirmForm.value.date || !confirmForm.value.start_time) {
+    ElMessage.warning('請填寫上課時間'); return
+  }
+  confirming.value = true
+  try {
+    await classRequestApi.confirm(confirmingRequest.value.id, {
+      start_at: `${confirmForm.value.date}T${confirmForm.value.start_time}:00+08:00`,
+      end_at: confirmForm.value.end_time ? `${confirmForm.value.date}T${confirmForm.value.end_time}:00+08:00` : null,
+      title: confirmForm.value.title || '私人課程',
+      notes: confirmForm.value.notes || null,
+    })
+    ElMessage.success('課程已建立，通知已發送給學員')
+    showConfirmDialog.value = false
+    await fetchRequests()
+    refreshAll()
+  } catch (err) {
+    ElMessage.error(err.response?.data?.error || '操作失敗')
+  } finally {
+    confirming.value = false
+  }
+}
+
+async function declineRequest(req) {
+  try {
+    await ElMessageBox.confirm(`確定婉拒 ${req.member?.name} 的申請？`, '婉拒申請', {
+      confirmButtonText: '婉拒', cancelButtonText: '取消', type: 'warning',
+      confirmButtonClass: 'el-button--danger',
+    })
+    await classRequestApi.decline(req.id)
+    ElMessage.success('已婉拒並通知學員')
+    await fetchRequests()
+  } catch (err) {
+    if (err !== 'cancel') ElMessage.error(err.response?.data?.error || '操作失敗')
+  }
+}
 const showDetail = ref(false)
 const editingClass = ref(null)
 const selectedClass = ref(null)
@@ -313,7 +383,7 @@ async function changeEnrollmentStatus(enrollment, newStatus) {
 }
 
 onMounted(async () => {
-  await fetchMembers()
+  await Promise.all([fetchMembers(), fetchRequests()])
 })
 </script>
 
@@ -322,7 +392,7 @@ onMounted(async () => {
     <div class="flex items-center justify-between mb-6">
       <h2 class="text-xl font-bold text-gray-800">排課管理</h2>
       <el-button
-        v-if="auth.hasPermission('classes:create')"
+        v-if="activeTab === 'calendar' && auth.hasPermission('classes:create')"
         type="primary"
         @click="() => { editingClass = null; batchItems = [emptyItem()]; batchStep = 1; showForm = true }"
         style="background:#16a34a;border-color:#16a34a"
@@ -331,8 +401,62 @@ onMounted(async () => {
       </el-button>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm p-4">
+    <!-- Tab -->
+    <div class="flex gap-1 mb-5 bg-gray-100 p-1 rounded-lg w-fit">
+      <button
+        @click="activeTab = 'calendar'"
+        class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors"
+        :class="activeTab === 'calendar' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+      >📅 課程月曆</button>
+      <button
+        @click="activeTab = 'requests'"
+        class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5"
+        :class="activeTab === 'requests' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+      >
+        📩 待確認申請
+        <span v-if="requests.length" class="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center leading-none">
+          {{ requests.length }}
+        </span>
+      </button>
+    </div>
+
+    <!-- 月曆 -->
+    <div v-show="activeTab === 'calendar'" class="bg-white rounded-xl shadow-sm p-4">
       <FullCalendar ref="calendarRef" :options="calendarOptions" />
+    </div>
+
+    <!-- 待確認申請 -->
+    <div v-if="activeTab === 'requests'">
+      <div v-if="requestsLoading" class="text-center py-12 text-gray-400">載入中…</div>
+      <div v-else-if="!requests.length" class="text-center py-12 text-gray-400 bg-white rounded-xl">
+        目前沒有待確認的申請
+      </div>
+      <div v-else class="space-y-3">
+        <div
+          v-for="req in requests" :key="req.id"
+          class="bg-white rounded-xl p-5 shadow-sm"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <div class="space-y-1.5">
+              <p class="font-semibold text-gray-800">{{ req.member?.name }}
+                <span v-if="req.member?.phone" class="text-sm font-normal text-gray-400 ml-1">{{ req.member.phone }}</span>
+              </p>
+              <div class="text-sm text-gray-500 space-y-0.5">
+                <p class="font-medium text-gray-600">希望時間：</p>
+                <p v-for="(d, i) in req.preferred_dates" :key="i">
+                  {{ i + 1 }}. {{ dayjs(d).format('MM/DD (ddd) HH:mm') }}
+                </p>
+              </div>
+              <p v-if="req.notes" class="text-sm text-gray-500">備注：{{ req.notes }}</p>
+              <p class="text-xs text-gray-300">申請於 {{ dayjs(req.created_at).format('MM/DD HH:mm') }}</p>
+            </div>
+            <div class="flex flex-col gap-2 shrink-0">
+              <el-button type="primary" size="small" @click="openConfirm(req)" style="background:#16a34a;border-color:#16a34a">確認排課</el-button>
+              <el-button size="small" type="danger" plain @click="declineRequest(req)">婉拒</el-button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 課程詳情 Dialog -->
@@ -556,5 +680,42 @@ onMounted(async () => {
         </template>
       </template>
     </el-dialog>
+    <!-- 確認排課 Dialog -->
+    <el-dialog v-model="showConfirmDialog" title="確認排課" width="min(420px, 92vw)">
+      <div v-if="confirmingRequest" class="space-y-4">
+        <div class="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 space-y-1">
+          <p>學員：<span class="font-medium text-gray-800">{{ confirmingRequest.member?.name }}</span></p>
+          <p v-if="confirmingRequest.notes">備注：{{ confirmingRequest.notes }}</p>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">課程名稱</label>
+          <el-input v-model="confirmForm.title" placeholder="私人課程" />
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div class="col-span-3 sm:col-span-1">
+            <label class="block text-sm text-gray-600 mb-1">日期 *</label>
+            <el-input v-model="confirmForm.date" type="date" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">開始 *</label>
+            <el-input v-model="confirmForm.start_time" type="time" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">結束</label>
+            <el-input v-model="confirmForm.end_time" type="time" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">備注（選填）</label>
+          <el-input v-model="confirmForm.notes" type="textarea" :rows="2" />
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showConfirmDialog = false">取消</el-button>
+        <el-button type="primary" :loading="confirming" @click="submitConfirm"
+          style="background:#16a34a;border-color:#16a34a">建立課程並通知學員</el-button>
+      </template>
+    </el-dialog>
+
   </Layout>
 </template>
