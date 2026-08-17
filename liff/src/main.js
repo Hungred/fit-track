@@ -29,10 +29,9 @@ async function bootstrap() {
     store.setGym(gymId)
     await store.init()
     if (!store.initError) {
-      const currentPath = window.location.pathname
-      const knownPaths = ['/', '/bind', '/history', '/classes', '/space-booking', '/leave']
-      const targetPath = knownPaths.includes(currentPath) ? currentPath : '/'
-      if (!store.member && targetPath !== '/space-booking') {
+      const targetPath = window.location.pathname || '/'
+      const noAuthPaths = ['/space-booking', '/group-classes']
+      if (!store.member && !noAuthPaths.includes(targetPath)) {
         await router.push('/bind')
       } else {
         await router.push(targetPath)
