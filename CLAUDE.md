@@ -71,7 +71,7 @@ VITE_API_URL=https://fit-track-api-94nn.onrender.com
 |--------|------|
 | `gyms` | 健身房主檔，含 LINE 憑證（`line_channel_secret`、`line_channel_access_token`、`liff_id`）、`admin_password`、`status`（`active` / `suspended`） |
 | `members` | 學員與教練，`role` 欄位區分（`member` / `coach`），含 `gym_id` |
-| `packages` | 堂數方案範本，含 `price`、`price_per_session`、`price_total`、`valid_days`，含 `gym_id` |
+| `packages` | 堂數方案範本，含 `price`、`price_per_session`、`price_total`、`valid_days`、`category`（`general` / `massage` / `boxing`，DEFAULT `'general'`），含 `gym_id` |
 | `member_packages` | 學員持有的方案，含剩餘堂數 `remaining_sessions`，含 `gym_id` |
 | `checkins` | 簽到記錄，`method` = `button` / `qr` / `manual`，含 `gym_id` |
 | `qr_tokens` | QR Code token，掃完失效，含 `gym_id` |
@@ -287,8 +287,9 @@ DELETE /api/group-classes/enrollments/:enrollmentId          移除報名（requ
 - [x] PWA 支援（加入主畫面捷徑，各自獨立圖示與 manifest）
 - [x] 場地租借系統：`spaces` + `space_bookings` 資料表；Admin 後台 SpacesPage（場地 CRUD）與 SpaceBookingsPage（預約管理、確認推播 LINE）；ClassesPage 月曆整合場地預約（紫色事件）；LIFF `/space-booking` 4 步驟預約流程（選場地→選時間→填資料→成功），允許未綁定學員操作
 - [x] LIFF `/leave` 獨立請假申請頁（橘色主題，含請假表單、歷史記錄、取消功能）
-- [x] LINE 圖文選單更新為 2×3（6 格）：立即簽到、我的堂數、租借場地、出勤記錄、我的課程、請假申請；PNG 檔在 `~/Desktop/fit_track_richmenu.png`（2500×1686px，Python Pillow 產生，暖棕/米白棋盤格設計）
-- [x] 團課管理系統：`group_classes`、`group_class_terms`、`group_class_sessions`、`group_class_enrollments` 4 張資料表；Admin 後台 GroupClassesPage（3 欄：團課→期別→報名名單，開新期自動產生 sessions，付款狀態標記）；LIFF `/group-classes` 學員瀏覽報名頁（支援未綁定學員）；圖文選單右下角規劃改為「團課報名」（PNG 尚未更新）
+- [x] LINE 圖文選單更新為 5 格非對稱版型（左 2 行 × 中 2 行 + 右全高）：場地租借、不定期團課、體驗課（暫停用）、私人課程（暫停用）、場地介紹（暫停用）；PNG 在 `~/Desktop/fit_track_richmenu_new.png`（2500×1686px，Python Pillow 產生，暖棕/米白棋盤格）；`backend/scripts/setup-richmenu.js` 透過 LINE Messaging API 建立自訂區域版型並上傳圖片；部署使用 `GYM_ID=xxx node scripts/setup-richmenu.js`
+- [x] 團課管理系統：`group_classes`、`group_class_terms`、`group_class_sessions`、`group_class_enrollments` 4 張資料表；Admin 後台 GroupClassesPage（3 欄：團課→期別→報名名單，開新期自動產生 sessions，付款狀態標記）；LIFF `/group-classes` 學員瀏覽報名頁（支援未綁定學員）
+- [x] 方案管理分類：`packages` 表新增 `category` 欄位（`general` 私人教練課 / `massage` 運動按摩 / `boxing` 拳擊課）；Admin PackagesPage 加 4 個 Tab 篩選，前端用 `computed` 做 client-side 過濾；方案卡片顯示分類 badge（藍/紫/紅）；建立 / 編輯 dialog 加類別選擇器
 
 ---
 
@@ -353,5 +354,7 @@ DELETE /api/group-classes/enrollments/:enrollmentId          移除報名（requ
 25. **Render 免費方案暫停（x-render-routing: no-deploy）**：Render 免費服務被 suspend（非冷啟動）時回傳此 header，cron job 全部失敗。需到 Render Dashboard → Resume Service 或手動 Deploy 才能喚醒
 28. **GitHub Actions 排程不可靠**：`schedule: cron` 在 GitHub Actions 常有數小時延誤，不適合 5 分鐘觸發的課程提醒。已改用 Supabase Edge Function + pg_cron（資料庫層排程，可靠且不依賴 Render）
 29. **Supabase API Key 新舊格式不一致**：Supabase 已將 API key 改為新格式（`sb_secret_...`），但舊 JWT 格式（`eyJ...`）仍存在 Legacy 分頁。Edge Function 內部注入的 `SUPABASE_SERVICE_ROLE_KEY` 是新格式；pg_cron SQL 的 Authorization header 必須用同一格式才能通過驗證
+30. **ALTER TABLE DEFAULT 不補舊資料**：`ALTER TABLE packages ADD COLUMN category TEXT DEFAULT 'general'` 只讓新插入的 row 有預設值，既有 row 的 category 欄位為 NULL。需額外執行 `UPDATE packages SET category = 'general' WHERE category IS NULL` 才能讓舊資料套用預設值
+31. **LINE 圖文選單自訂版型只能用 API**：LINE OA Manager 只支援預設格線模板，非對稱版型（如左右非等寬、全高 column）必須用 LINE Messaging API 的 `POST /v2/bot/richmenu` 自訂 `areas` 座標。設為預設選單的端點是 `POST /v2/bot/user/all/richmenu/{id}`（`user` 為單數，用 `users` 會 404）
 26. **場地預約跨午夜時間計算**：`end - start` 結果為負（如 21:00→00:00 = -21h），要 `if (diff <= 0) diff += 24 * 60` 修正；`end_at` 的日期也要用隔天的日期，否則 start_at > end_at 導致資料庫衝突偵測失效
 27. **Grid 子元素 overflow 溢出**：CSS Grid 預設子元素 `min-width: auto`，內容過長時會撐破格線。在 grid 子元素加 `min-w-0` 讓其可以縮小至 0，解決半寬輸入框在手機上重疊的問題
