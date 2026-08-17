@@ -10,6 +10,7 @@ LINE 官方帳號健身房管理系統（多租戶 SaaS）的完整開發紀錄�
 
 <!-- LOG_START -->
 ### 2026-08-17
+- fix: LIFF 深層連結移除 knownPaths 白名單，直接用還原路徑
 - feat: 圖文選單④私人課程改連結至 /private-lessons
 - feat: 私人課程申請加指定教練選擇
 - feat: 私人課程申請功能 — 學員 LIFF 申請 + 教練後台確認排課
