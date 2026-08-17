@@ -1,5 +1,5 @@
 import supabase from '../lib/supabase.js'
-import { pushMessage, classInviteMessage } from '../lib/line.js'
+import { pushMessage, classInviteMessage, privateRequestNotifyMessage } from '../lib/line.js'
 
 export async function submitRequest(req, res) {
   const { preferred_dates, notes, coach_id } = req.body
@@ -24,16 +24,12 @@ export async function submitRequest(req, res) {
 
   const token = req.gym.line_channel_access_token
   if (coach?.line_uid && token) {
-    const dates = preferred_dates
-      .map(d => new Date(d).toLocaleString('zh-TW', {
-        timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric',
-        hour: '2-digit', minute: '2-digit',
-      }))
-      .join('、')
-    await pushMessage(coach.line_uid, [{
-      type: 'text',
-      text: `📩 ${req.member.name} 申請了私人課程\n\n希望時間：${dates}${notes ? `\n備注：${notes}` : ''}\n\n請至後台「排課管理 → 待確認申請」處理`,
-    }], token)
+    const adminUrl = `${process.env.ADMIN_URL}/classes?gym=${req.gym.id}`
+    await pushMessage(
+      coach.line_uid,
+      [privateRequestNotifyMessage(req.member.name, preferred_dates, notes, adminUrl)],
+      token,
+    )
   }
 
   res.json({ request: data })

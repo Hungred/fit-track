@@ -446,6 +446,59 @@ export function spaceRentalInfoMessage(gym, liffUrl) {
   }
 }
 
+export function privateRequestNotifyMessage(memberName, preferred_dates, notes, adminUrl) {
+  const dates = preferred_dates
+    .map(d => new Date(d).toLocaleString('zh-TW', {
+      timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric',
+      weekday: 'short', hour: '2-digit', minute: '2-digit',
+    }))
+    .join('\n')
+
+  const bodyContents = [
+    { type: 'text', text: `${memberName} 申請了私人課程`, weight: 'bold', size: 'md', color: '#1f2937' },
+    {
+      type: 'box', layout: 'vertical', margin: 'lg', spacing: 'xs',
+      contents: [
+        { type: 'text', text: '希望時間', size: 'xs', color: '#6b7280', weight: 'bold' },
+        { type: 'text', text: dates, size: 'sm', color: '#374151', wrap: true, margin: 'xs' },
+      ],
+    },
+  ]
+
+  if (notes) {
+    bodyContents.push({
+      type: 'box', layout: 'vertical', margin: 'md', spacing: 'xs',
+      contents: [
+        { type: 'text', text: '備注', size: 'xs', color: '#6b7280', weight: 'bold' },
+        { type: 'text', text: notes, size: 'sm', color: '#374151', wrap: true, margin: 'xs' },
+      ],
+    })
+  }
+
+  return {
+    type: 'flex',
+    altText: `📩 ${memberName} 申請了私人課程`,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box', layout: 'vertical', backgroundColor: '#16a34a',
+        contents: [{ type: 'text', text: '📩 私人課程申請', color: '#ffffff', weight: 'bold', size: 'md' }],
+      },
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'sm',
+        contents: bodyContents,
+      },
+      footer: {
+        type: 'box', layout: 'vertical',
+        contents: [{
+          type: 'button', style: 'primary', color: '#16a34a',
+          action: { type: 'uri', label: '前往後台處理', uri: adminUrl },
+        }],
+      },
+    },
+  }
+}
+
 export function lowSessionMessage(memberName, remaining, packageName) {
   return [
     {
