@@ -100,8 +100,8 @@ async function submit() {
           <p class="text-xs text-gray-400 mt-0.5">可填最多 3 個備選時間</p>
         </div>
 
-        <div v-for="(slot, i) in slots" :key="i" class="flex items-center gap-2">
-          <div class="flex-1 grid grid-cols-2 gap-2">
+        <div v-for="(slot, i) in slots" :key="i" class="flex items-start gap-2">
+          <div class="flex-1 flex flex-col gap-2">
             <input
               v-model="slot.date"
               type="date"
@@ -117,7 +117,7 @@ async function submit() {
           <button
             v-if="slots.length > 1"
             @click="removeSlot(i)"
-            class="text-gray-300 hover:text-red-400 text-xl leading-none shrink-0"
+            class="text-gray-300 hover:text-red-400 text-xl leading-none shrink-0 mt-2.5"
           >✕</button>
         </div>
 
