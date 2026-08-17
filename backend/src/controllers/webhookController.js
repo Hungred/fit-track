@@ -59,6 +59,7 @@ async function handlePostback(event, client, gym) {
     .select('id, name')
     .eq('line_uid', lineUid)
     .eq('gym_id', gym.id)
+    .eq('role', 'member')
     .single()
 
   if (!member) return
@@ -138,6 +139,7 @@ async function handleTextMessage(event, client, gym) {
       .select('*')
       .eq('line_uid', lineUid)
       .eq('gym_id', gym.id)
+      .eq('role', 'member')
       .single()
 
     if (!member) {

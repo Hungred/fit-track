@@ -9,6 +9,7 @@ export async function requireMember(req, res, next) {
     .select('*')
     .eq('line_uid', lineUid)
     .eq('gym_id', req.gym.id)
+    .eq('role', 'member')
     .single()
 
   if (error || !member) return res.status(401).json({ error: '找不到學員資料，請先完成綁定' })
