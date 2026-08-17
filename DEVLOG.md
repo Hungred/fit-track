@@ -10,6 +10,7 @@ LINE 官方帳號健身房管理系統（多租戶 SaaS）的完整開發紀錄�
 
 <!-- LOG_START -->
 ### 2026-08-17
+- fix: requireMember 與 webhook 查詢加 role=member，避免同 UID 兼任學員教練時 .single() 失敗
 - feat: 教練 LINE UID 綁定（webhook我的ID + Admin手動填寫 + 一次性綁定連結）
 - fix: 私人課程申請頁日期時間改上下排版
 - fix: LIFF 深層連結移除 knownPaths 白名單，直接用還原路徑
