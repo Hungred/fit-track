@@ -69,6 +69,9 @@ function goStep3() {
   if (totalHours.value <= 0) { error.value = '結束時間需晚於開始時間'; return }
   step.value = 3
   if (store.member) form.value.renter_name = store.member.name
+  else if (!form.value.renter_name && store.lineProfile?.displayName) {
+    form.value.renter_name = store.lineProfile.displayName
+  }
 }
 
 async function submit() {
@@ -234,6 +237,9 @@ onMounted(async () => {
             placeholder="請輸入姓名"
             class="w-full border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-purple-400"
           />
+          <p v-if="!store.member" class="text-xs text-gray-400 mt-1">
+            您以非會員身份預約，請確認姓名是否正確
+          </p>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">電話</label>
