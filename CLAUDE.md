@@ -85,7 +85,11 @@ VITE_API_URL=https://fit-track-api-94nn.onrender.com
 | `group_class_sessions` | 每堂課（開新期時自動產生），`term_id`、`session_number`、`scheduled_at`（TIMESTAMPTZ）、`gym_id` |
 | `group_class_enrollments` | 學員報名，`term_id`、`member_id`（可 null，非會員用 renter_name/phone/line_uid）、`payment_status`（`unpaid`/`paid`）、`gym_id`，`(term_id, member_id)` 唯一鍵 |
 
-**members 表新增欄位**（多教練支援）：`username`（TEXT UNIQUE per gym）、`coach_password`（TEXT，bcrypt hash）、`permissions`（JSONB array）、`is_owner`（BOOLEAN）
+**members 表新增欄位**（多教練支援）：`username`（TEXT UNIQUE per gym）、`coach_password`（TEXT，bcrypt hash）、`permissions`（JSONB array）、`is_owner`（BOOLEAN）、`line_uid`（教練初始值為 `coach_<uuid>` 佔位符，綁定後更新為真實 LINE UID `U` + 32 hex）
+
+**members UNIQUE constraint**：從全域 `UNIQUE(line_uid)` 改為 `UNIQUE(line_uid, gym_id, role)`，允許同一人同時是某館學員也是教練。所有查學員的地方必須加 `.eq('role', 'member')` 避免 `.single()` 因多 row 報錯。
+
+**coach_bind_tokens** 資料表：`token`（TEXT PK）、`coach_id`（UUID FK members.id）、`gym_id`（UUID）、`expires_at`（TIMESTAMPTZ，24 小時有效）。使用後立即刪除。
 
 **重要**：`checkins` 有兩個 FK 指向 `members`（`member_id` 和 `created_by`），Supabase join 時必須用明確的 FK 欄位名稱：
 ```js
@@ -166,8 +170,12 @@ DELETE /api/coach/checkins/:id          刪除簽到記錄
 
 GET    /api/coach/coaches               教練列表（requireCoach）
 POST   /api/coach/coaches               新增教練（requireOwner）
-PATCH  /api/coach/coaches/:id           編輯教練（requireOwner）
+PATCH  /api/coach/coaches/:id           編輯教練（requireOwner，含 line_uid 欄位）
 DELETE /api/coach/coaches/:id           刪除教練（requireOwner，不可刪自己或 is_owner）
+POST   /api/coach/coaches/:id/bind-token  產生一次性綁定 token（requireOwner，24h 有效）
+
+# 教練 LINE 綁定（公開，只需 requireGym）
+POST   /api/coach-bind                  教練掃 LIFF QR → 用 token 綁定自己的 LINE UID
 
 GET    /api/coach/classes               課程列表（query: month）
 POST   /api/coach/classes/batch         批次新增多堂課程並推播 LINE 邀請
@@ -218,10 +226,12 @@ DELETE /api/group-classes/enrollments/:enrollmentId          移除報名（requ
 - `stores/user.js`：`loading` 預設 `true`，避免 LIFF init 完成前 router guard 就跳轉
 - `App.vue`：先判斷 `initError` → `loading` → 才渲染 `RouterView`，解決 Render 冷啟動問題
 - `vercel.json`：SPA routing 需要 rewrites，否則重新整理會 404
-- API 模組：`memberApi`、`checkinApi`、`leaveApi`、`spaceApi`、`groupClassApi`
-- 頁面：`/`（簽到）、`/bind`（綁定）、`/history`（出勤記錄）、`/classes`（我的課程）、`/space-booking`（場地租借）、`/leave`（請假申請）、`/group-classes`（團課報名）
-- `/space-booking`、`/group-classes` 允許**未綁定學員**進入（router guard 特例），使用 `liff.getProfile()` 取得 LINE UID
+- API 模組：`memberApi`、`checkinApi`、`leaveApi`、`spaceApi`、`groupClassApi`、`coachBindApi`
+- 頁面：`/`（簽到）、`/bind`（綁定）、`/history`（出勤記錄）、`/classes`（我的課程）、`/space-booking`（場地租借）、`/leave`（請假申請）、`/group-classes`（團課報名）、`/coach-bind`（教練 LINE 綁定）
+- `/space-booking`、`/group-classes`、`/coach-bind` 允許**未綁定學員**進入（router guard 特例），使用 `liff.getProfile()` 取得 LINE UID
+- `/space-booking` 進入 step 3 時自動帶入 LINE displayName（非會員）或 member.name（已綁定學員），顯示提示「您以非會員身份預約」
 - `/leave` 為獨立請假申請頁，橘色主題，含請假歷史記錄與取消功能
+- `/coach-bind`：讀取 URL `?token=`，呼叫 `liff.getProfile()` 取得 userId，呼叫 `POST /api/coach-bind` 完成綁定，顯示成功/失敗狀態
 
 ### Admin（教練後台）
 - 入口 URL 帶 `?gym=<gym_id>` 設定健身房，router guard 讀取並存 localStorage
@@ -290,12 +300,26 @@ DELETE /api/group-classes/enrollments/:enrollmentId          移除報名（requ
 - [x] LINE 圖文選單更新為 5 格非對稱版型（左 2 行 × 中 2 行 + 右全高）：場地租借、不定期團課、體驗課（暫停用）、私人課程（暫停用）、場地介紹（暫停用）；PNG 在 `~/Desktop/fit_track_richmenu_new.png`（2500×1686px，Python Pillow 產生，暖棕/米白棋盤格）；`backend/scripts/setup-richmenu.js` 透過 LINE Messaging API 建立自訂區域版型並上傳圖片；部署使用 `GYM_ID=xxx node scripts/setup-richmenu.js`
 - [x] 團課管理系統：`group_classes`、`group_class_terms`、`group_class_sessions`、`group_class_enrollments` 4 張資料表；Admin 後台 GroupClassesPage（3 欄：團課→期別→報名名單，開新期自動產生 sessions，付款狀態標記）；LIFF `/group-classes` 學員瀏覽報名頁（支援未綁定學員）
 - [x] 方案管理分類：`packages` 表新增 `category` 欄位（`general` 私人教練課 / `massage` 運動按摩 / `boxing` 拳擊課）；Admin PackagesPage 加 4 個 Tab 篩選，前端用 `computed` 做 client-side 過濾；方案卡片顯示分類 badge（藍/紫/紅）；建立 / 編輯 dialog 加類別選擇器
+- [x] 教練 LINE UID 綁定：Method A（Webhook 傳送「我的ID」，Bot 回覆發話者的 LINE UID）；Method B（後台產生一次性 LIFF 綁定連結，教練用 LINE 掃開後自動完成綁定）；CoachesPage 顯示 LINE UID 欄位與「產生綁定連結」按鈕（owner only）
+- [x] members UNIQUE constraint 改為 per-gym-role：允許同一 LINE UID 同時是學員與教練，`requireMember` 和所有學員查詢都加 `.eq('role', 'member')`
+- [x] 私人課程申請通知加後台連結：`classRequestController` 改用 Flex Message，footer 附「前往後台處理」按鈕，直接導向 Admin ClassesPage
+- [x] QR Code 簽到修正：`router.push({ path, query })` 保留 token query param；QR URL 改用 LIFF gateway（`liff.line.me/{liff_id}`）確保 LINE 內開啟有 LIFF context
+- [x] 場地預約非會員支援：教練不需綁定 LINE 即可預約場地，step 3 自動帶入 LINE displayName，顯示「非會員身份預約」提示
 
 ---
 
 ## 待完成功能
 
-目前無待辦。
+- [ ] 圖文選單依角色分流（教練看到教練選單，學員看到學員選單）
+- [ ] 體驗課申請表單 + Excel 匯出
+- [ ] 首頁改為排課表（學員 LIFF 主頁顯示即將上課的課程）
+- [ ] 同時段衝突限制（場地或課程重疊時擋）
+- [ ] 場地預約通知私人 LINE（確認時通知租借人）
+- [ ] 匯入既有簽到資料
+- [ ] 廣告功能
+- [ ] 營運後台 RWD
+- [ ] 私人課程申請 LIFF 頁面（目前圖文選單顯示「即將開放」）
+- [ ] 場地介紹 LIFF 頁面（目前圖文選單顯示「即將開放」）
 
 ## 權限 Key 清單
 
@@ -358,3 +382,7 @@ DELETE /api/group-classes/enrollments/:enrollmentId          移除報名（requ
 31. **LINE 圖文選單自訂版型只能用 API**：LINE OA Manager 只支援預設格線模板，非對稱版型（如左右非等寬、全高 column）必須用 LINE Messaging API 的 `POST /v2/bot/richmenu` 自訂 `areas` 座標。設為預設選單的端點是 `POST /v2/bot/user/all/richmenu/{id}`（`user` 為單數，用 `users` 會 404）
 26. **場地預約跨午夜時間計算**：`end - start` 結果為負（如 21:00→00:00 = -21h），要 `if (diff <= 0) diff += 24 * 60` 修正；`end_at` 的日期也要用隔天的日期，否則 start_at > end_at 導致資料庫衝突偵測失效
 27. **Grid 子元素 overflow 溢出**：CSS Grid 預設子元素 `min-width: auto`，內容過長時會撐破格線。在 grid 子元素加 `min-w-0` 讓其可以縮小至 0，解決半寬輸入框在手機上重疊的問題
+32. **同 LINE UID 同時是學員和教練**：原本全域 `UNIQUE(line_uid)` 會擋住同一人同時有兩個角色。解法：DROP 舊 constraint，改建 `CREATE UNIQUE INDEX members_line_uid_gym_role_key ON members(line_uid, gym_id, role)`。但 Supabase `.single()` 若不加 `.eq('role', 'member')` 仍會因多 row 報錯（401）→ 所有查學員的地方都必須加 role filter
+33. **`router.push(path)` 丟失 query params**：`router.push('/target')` 只推 path，`?token=xxx` 等 query 全部丟失。必須用 `router.push({ path: targetPath, query: Object.fromEntries(searchParams) })` 物件形式才會保留
+34. **LIFF QR URL 要用 LIFF gateway**：QR Code URL 若直接指向 Vercel（`fit-track-liff.vercel.app`），在 LINE 內開啟不會初始化 LIFF context，`liff.getProfile()` 會失敗。正確格式：`liff.line.me/{liff_id}/path?params`，確保 LINE 識別為 LIFF app 並做 OAuth redirect
+35. **Git push 被拒（GitHub Actions 自動 commit）**：GitHub Actions 會自動 commit `DEVLOG.md`，push 前不 pull 會報 `rejected: non-fast-forward`。每次 push 前先 `git pull --rebase origin main`
