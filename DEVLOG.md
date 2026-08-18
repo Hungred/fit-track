@@ -9,6 +9,8 @@ LINE 官方帳號健身房管理系統（多租戶 SaaS）的完整開發紀錄�
 ## 🗓️ 近期更新
 
 <!-- LOG_START -->
+### 2026-08-18
+- 允許非會員教練直接預約場地，自動帶入 LINE 顯示名稱
 ### 2026-08-17
 - fix: QR 簽到 token 不再被 router.push 丟棄，QR URL 改用 LIFF gateway
 - fix: 待確認申請按鈕寬度統一
