@@ -118,6 +118,8 @@ const selectedBooking = ref(null)
 const showBookingDetail = ref(false)
 const selectedGroupSession = ref(null)
 const showGroupSessionDetail = ref(false)
+const groupSessionEnrollments = ref([])
+const groupSessionEnrollmentsLoading = ref(false)
 
 // 編輯用（單筆）
 const emptyForm = () => ({
@@ -256,8 +258,7 @@ const calendarOptions = ref({
       selectedBooking.value = info.event.extendedProps.bookingData
       showBookingDetail.value = true
     } else if (type === 'group_session') {
-      selectedGroupSession.value = info.event.extendedProps.sessionData
-      showGroupSessionDetail.value = true
+      openGroupSessionDetail(info.event.extendedProps.sessionData)
     } else {
       openDetail(info.event.extendedProps.classData)
     }
@@ -442,6 +443,25 @@ function goToGroupClass() {
   if (!gc) return
   showGroupSessionDetail.value = false
   router.push({ path: '/group-classes', query: { classId: gc.id, termId: selectedGroupSession.value.term_id } })
+}
+
+async function openGroupSessionDetail(session) {
+  selectedGroupSession.value = session
+  showGroupSessionDetail.value = true
+  groupSessionEnrollments.value = []
+  groupSessionEnrollmentsLoading.value = true
+  try {
+    const res = await groupClassApi.listEnrollments(session.term_id)
+    groupSessionEnrollments.value = res.data.enrollments || []
+  } finally {
+    groupSessionEnrollmentsLoading.value = false
+  }
+}
+
+async function toggleGroupEnrollmentPayment(enrollment) {
+  const newStatus = enrollment.payment_status === 'paid' ? 'unpaid' : 'paid'
+  await groupClassApi.updateEnrollment(enrollment.id, { payment_status: newStatus })
+  enrollment.payment_status = newStatus
 }
 
 onMounted(async () => {
@@ -684,6 +704,28 @@ onMounted(async () => {
         <div class="flex justify-between">
           <span class="text-gray-500">第幾堂</span>
           <span>第 {{ selectedGroupSession.session_number }} 堂</span>
+        </div>
+
+        <div>
+          <p class="font-semibold text-gray-700 mb-2">上課名單</p>
+          <div v-if="groupSessionEnrollmentsLoading" class="text-center py-4 text-gray-400 text-xs">載入中...</div>
+          <div v-else-if="!groupSessionEnrollments.length" class="text-center py-4 text-gray-400 text-xs">目前尚無人報名</div>
+          <div v-else class="space-y-1.5">
+            <div
+              v-for="e in groupSessionEnrollments"
+              :key="e.id"
+              class="flex items-center justify-between py-1.5 px-3 bg-gray-50 rounded-lg"
+            >
+              <span class="text-gray-700">{{ e.member?.name || e.renter_name || '（非會員）' }}</span>
+              <span
+                class="text-xs px-2 py-0.5 rounded-full cursor-pointer"
+                :class="e.payment_status === 'paid' ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-600'"
+                @click="toggleGroupEnrollmentPayment(e)"
+              >
+                {{ e.payment_status === 'paid' ? '已付款' : '未付款' }}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
       <template #footer>
