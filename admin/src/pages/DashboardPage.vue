@@ -238,6 +238,7 @@ const calendarOptions = ref({
   },
   buttonText: { today: '今天', month: '月', list: '清單' },
   noEventsText: '本月無課程',
+  eventDisplay: 'block',
   eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
   eventSources: [{ events: loadEvents }],
   dateClick: (info) => {
@@ -263,14 +264,14 @@ const calendarOptions = ref({
 
 function classEventColor(cls) {
   const enrollments = cls.enrollments || []
-  if (!enrollments.length) return { bg: '#9ca3af', border: '#6b7280' }
-  if (enrollments.some(e => e.status === 'pending')) return { bg: '#f59e0b', border: '#d97706' }
-  return { bg: '#16a34a', border: '#15803d' }
+  if (!enrollments.length) return { bg: '#f3f4f6', border: '#6b7280', text: '#374151' }
+  if (enrollments.some(e => e.status === 'pending')) return { bg: '#fef3c7', border: '#d97706', text: '#92400e' }
+  return { bg: '#dcfce7', border: '#15803d', text: '#166534' }
 }
 
 function buildEvent(c) {
   const names = (c.enrollments || []).map(e => e.member?.name).filter(Boolean).join('、')
-  const { bg, border } = classEventColor(c)
+  const { bg, border, text } = classEventColor(c)
   return {
     id: c.id,
     title: names || c.title || '上課',
@@ -278,6 +279,7 @@ function buildEvent(c) {
     end: c.end_at || undefined,
     backgroundColor: bg,
     borderColor: border,
+    textColor: text,
     extendedProps: { classData: c },
   }
 }
@@ -289,8 +291,9 @@ function buildBookingEvent(b) {
     title: `🏢 ${b.space?.name || '場地'} — ${b.renter_name}`,
     start: b.start_at,
     end: b.end_at,
-    backgroundColor: isConfirmed ? '#7c3aed' : '#a78bfa',
+    backgroundColor: isConfirmed ? '#ede9fe' : '#f5f3ff',
     borderColor: isConfirmed ? '#6d28d9' : '#8b5cf6',
+    textColor: isConfirmed ? '#5b21b6' : '#6d28d9',
     extendedProps: { type: 'booking', bookingData: b },
   }
 }
@@ -301,8 +304,9 @@ function buildGroupSessionEvent(s) {
     id: `group-${s.id}`,
     title: `👥 ${gc?.name || '團課'}`,
     start: s.scheduled_at,
-    backgroundColor: '#0d9488',
-    borderColor: '#0f766e',
+    backgroundColor: '#ccfbf1',
+    borderColor: '#0d9488',
+    textColor: '#115e59',
     extendedProps: { type: 'group_session', sessionData: s },
   }
 }
