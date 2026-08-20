@@ -28,6 +28,28 @@ async function countOverlappingClasses(gymId, startAt, endAt, excludeId) {
   }).length
 }
 
+// 同時段只能是「1 個團課」或「最多 4 堂私課」兩者擇一，不能並存
+async function hasGroupSessionConflict(gymId, startAt, endAt) {
+  const s = new Date(startAt).getTime()
+  const e = endAt ? new Date(endAt).getTime() : s + MS_HOUR
+  const windowStart = new Date(s - 24 * MS_HOUR).toISOString()
+  const windowEnd = new Date(e + 24 * MS_HOUR).toISOString()
+
+  const { data, error } = await supabase
+    .from('group_class_sessions')
+    .select('scheduled_at, term:term_id(group_class:group_class_id(duration_minutes))')
+    .eq('gym_id', gymId)
+    .gte('scheduled_at', windowStart)
+    .lte('scheduled_at', windowEnd)
+  if (error) throw new Error(error.message)
+
+  return (data || []).some(gs => {
+    const gs1 = new Date(gs.scheduled_at).getTime()
+    const gs2 = gs1 + (gs.term?.group_class?.duration_minutes || 60) * 60000
+    return gs1 < e && gs2 > s
+  })
+}
+
 export async function listClasses(req, res) {
   const { month } = req.query
   const base = month || new Date().toISOString().slice(0, 7)
@@ -66,6 +88,9 @@ export async function createClass(req, res) {
   const overlapping = await countOverlappingClasses(req.gym.id, start_at, end_at)
   if (overlapping >= MAX_CONCURRENT_CLASSES) {
     return res.status(409).json({ error: `此時段私人課已達上限（${MAX_CONCURRENT_CLASSES} 組），請選擇其他時間` })
+  }
+  if (await hasGroupSessionConflict(req.gym.id, start_at, end_at)) {
+    return res.status(409).json({ error: '此時段已有團課，無法同時新增私人課程' })
   }
 
   const { data: cls, error } = await supabase
@@ -122,6 +147,10 @@ export async function batchCreateClasses(req, res) {
     const overlapping = await countOverlappingClasses(req.gym.id, start_at, end_at)
     if (overlapping >= MAX_CONCURRENT_CLASSES) {
       skipped.push({ start_at, reason: `此時段私人課已達上限（${MAX_CONCURRENT_CLASSES} 組）` })
+      continue
+    }
+    if (await hasGroupSessionConflict(req.gym.id, start_at, end_at)) {
+      skipped.push({ start_at, reason: '此時段已有團課' })
       continue
     }
 
@@ -185,6 +214,9 @@ export async function updateClass(req, res) {
     const overlapping = await countOverlappingClasses(req.gym.id, finalStart, finalEnd, req.params.id)
     if (overlapping >= MAX_CONCURRENT_CLASSES) {
       return res.status(409).json({ error: `此時段私人課已達上限（${MAX_CONCURRENT_CLASSES} 組），請選擇其他時間` })
+    }
+    if (await hasGroupSessionConflict(req.gym.id, finalStart, finalEnd)) {
+      return res.status(409).json({ error: '此時段已有團課，無法同時新增私人課程' })
     }
   }
 

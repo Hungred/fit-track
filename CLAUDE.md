@@ -306,7 +306,10 @@ DELETE /api/group-classes/enrollments/:enrollmentId          移除報名（requ
 - [x] 私人課程申請通知加後台連結：`classRequestController` 改用 Flex Message，footer 附「前往後台處理」按鈕，直接導向 Admin ClassesPage
 - [x] QR Code 簽到修正：`router.push({ path, query })` 保留 token query param；QR URL 改用 LIFF gateway（`liff.line.me/{liff_id}`）確保 LINE 內開啟有 LIFF context
 - [x] 場地預約非會員支援：教練不需綁定 LINE 即可預約場地，step 3 自動帶入 LINE displayName，顯示「非會員身份預約」提示
-- [x] 同時段衝突限制：場地預約 `updateBooking` 補上時段重疊檢查（原本只有 `createBooking` 有，改時間可無限重疊）；私人課程同時段最多 4 組（`classController.js` 的 `countOverlappingClasses`，套用在新增/批次新增/編輯，沒填結束時間預設 1 小時），批次新增時超額的時段會跳過並回傳 `skipped` 清單；團課同時段最多 1 組，`createTerm` 開新期前會先算好整期堂次時間並跟其他團課比對，重疊就整批擋掉（不會建立 term 或 session），錯誤訊息附上衝突的堂次時間與撞期的團課名稱
+- [x] 同時段衝突限制：場地預約 `updateBooking` 補上時段重疊檢查（原本只有 `createBooking` 有，改時間可無限重疊）。私人課程與團課是**互斥關係**，同時段只能二選一——要嘛最多 4 組私人課，要嘛 1 個團課，不能並存：
+  - 私人課程（`classController.js`）新增/批次新增/編輯時，`countOverlappingClasses` 檢查私課數 <4，`hasGroupSessionConflict` 檢查該時段沒有任何團課堂次，兩者都過才放行；批次新增時超額或撞團課的時段會跳過並回傳 `skipped` 清單
+  - 團課（`groupClassController.js`）開新期時，`findConflictingSessions` 會把整期堂次時間拿去跟「其他團課的堂次」+「私人課程」都比對一次，只要時段不是完全空的就整批擋掉（不會建立 term 或 session），錯誤訊息附上衝突的堂次時間與撞到的對象（團課名稱或私人課程標題）
+  - 沒填結束時間的私人課程預設當作 1 小時計算重疊
 - [x] 首頁三合一課表總覽：私人課程／場地預約／團課堂次合併進同一個 FullCalendar（原本的「排課管理」頁面整個搬進首頁），新增 `GET /api/group-classes/sessions` 給團課堂次的月份查詢；排課管理、團課管理、場地管理三個獨立頁面都保留（各自的 CRUD／報名名單/繳費狀態管理月曆做不到），月曆點團課事件可以 deep-link 到團課管理並自動展開對應期別
 
 ---

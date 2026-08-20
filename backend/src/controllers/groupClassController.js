@@ -3,32 +3,51 @@ import supabase from '../lib/supabase.js'
 const DAYS = ['日', '一', '二', '三', '四', '五', '六']
 const MS_HOUR = 3600000
 
-// 檢查 sessionTimes（即將建立的堂次時間）是否與其他團課的既有堂次重疊
+// 檢查 sessionTimes（即將建立的堂次時間）是否與其他團課的既有堂次或私人課程重疊
+// 同時段只能是「1 個團課」或「最多 4 堂私課」兩者擇一，不能並存
 async function findConflictingSessions(gymId, groupClassId, sessionTimes, durationMinutes) {
   if (!sessionTimes.length) return []
   const times = sessionTimes.map(t => new Date(t).getTime())
   const windowStart = new Date(Math.min(...times) - MS_HOUR).toISOString()
   const windowEnd = new Date(Math.max(...times) + durationMinutes * 60000 + MS_HOUR).toISOString()
 
-  const { data: existing, error } = await supabase
-    .from('group_class_sessions')
-    .select('id, scheduled_at, term:term_id(group_class:group_class_id(id, name, duration_minutes))')
-    .eq('gym_id', gymId)
-    .gte('scheduled_at', windowStart)
-    .lte('scheduled_at', windowEnd)
-  if (error) throw new Error(error.message)
+  const [{ data: existingSessions, error: sessionsErr }, { data: existingClasses, error: classesErr }] = await Promise.all([
+    supabase
+      .from('group_class_sessions')
+      .select('id, scheduled_at, term:term_id(group_class:group_class_id(id, name, duration_minutes))')
+      .eq('gym_id', gymId)
+      .gte('scheduled_at', windowStart)
+      .lte('scheduled_at', windowEnd),
+    supabase
+      .from('classes')
+      .select('id, title, start_at, end_at')
+      .eq('gym_id', gymId)
+      .gte('start_at', windowStart)
+      .lte('start_at', windowEnd),
+  ])
+  if (sessionsErr) throw new Error(sessionsErr.message)
+  if (classesErr) throw new Error(classesErr.message)
 
   const conflicts = []
   for (const t of sessionTimes) {
     const s1 = new Date(t).getTime()
     const e1 = s1 + durationMinutes * 60000
-    for (const ex of existing || []) {
+
+    for (const ex of existingSessions || []) {
       const otherClass = ex.term?.group_class
       if (!otherClass || otherClass.id === groupClassId) continue
       const s2 = new Date(ex.scheduled_at).getTime()
       const e2 = s2 + (otherClass.duration_minutes || 60) * 60000
       if (s1 < e2 && e1 > s2) {
         conflicts.push({ scheduled_at: t, conflict_with: otherClass.name })
+      }
+    }
+
+    for (const cls of existingClasses || []) {
+      const s2 = new Date(cls.start_at).getTime()
+      const e2 = cls.end_at ? new Date(cls.end_at).getTime() : s2 + MS_HOUR
+      if (s1 < e2 && e1 > s2) {
+        conflicts.push({ scheduled_at: t, conflict_with: `私人課程「${cls.title || '上課'}」` })
       }
     }
   }
