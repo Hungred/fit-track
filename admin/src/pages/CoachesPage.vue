@@ -48,6 +48,10 @@ const PERMISSION_GROUPS = [
     { key: 'coaches:edit', label: '編輯教練' },
     { key: 'coaches:delete', label: '刪除教練' },
   ]},
+  { label: '體驗課申請', items: [
+    { key: 'trials:view', label: '查看申請列表、匯出 Excel' },
+    { key: 'trials:manage', label: '更改狀態、刪除申請' },
+  ]},
 ]
 
 const ALL_PERMS = PERMISSION_GROUPS.flatMap(g => g.items.map(i => i.key))

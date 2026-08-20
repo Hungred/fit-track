@@ -53,3 +53,7 @@ export const classRequestApi = {
 export const coachBindApi = {
   bind: (token, line_uid) => api.post('/api/coach-bind', { token, line_uid }),
 }
+
+export const trialRequestApi = {
+  submit: (data) => api.post('/api/trial-requests', data),
+}

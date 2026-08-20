@@ -84,6 +84,7 @@ VITE_API_URL=https://fit-track-api-94nn.onrender.com
 | `group_class_terms` | 期別，`group_class_id`、`term_number`（第幾期）、`start_date`（DATE）、`status`（`open` 招生中 / `active` 上課中 / `closed` 結束）、`gym_id` |
 | `group_class_sessions` | 每堂課（開新期時自動產生），`term_id`、`session_number`、`scheduled_at`（TIMESTAMPTZ）、`gym_id` |
 | `group_class_enrollments` | 學員報名，`term_id`、`member_id`（可 null，非會員用 renter_name/phone/line_uid）、`payment_status`（`unpaid`/`paid`）、`gym_id`，`(term_id, member_id)` 唯一鍵 |
+| `trial_class_requests` | 體驗課申請，`name`、`phone`、`contact_info`、`contact_time_slots`（text[]）、`coach_gender_preference`、`trial_time_slots`（text[]）、`notes`、`line_uid`（可 null，非會員填寫）、`status`（`pending`/`contacted`/`closed`）、`gym_id` |
 
 **members 表新增欄位**（多教練支援）：`username`（TEXT UNIQUE per gym）、`coach_password`（TEXT，bcrypt hash）、`permissions`（JSONB array）、`is_owner`（BOOLEAN）、`line_uid`（教練初始值為 `coach_<uuid>` 佔位符，綁定後更新為真實 LINE UID `U` + 32 hex）
 
@@ -216,6 +217,13 @@ DELETE /api/group-classes/terms/:termId                      刪除期別（requ
 GET    /api/group-classes/terms/:termId/enrollments          報名名單（requireCoach）
 PATCH  /api/group-classes/enrollments/:enrollmentId          更新付款狀態（requireCoach）
 DELETE /api/group-classes/enrollments/:enrollmentId          移除報名（requireCoach）
+
+# 體驗課申請（需 x-gym-id）
+POST   /api/trial-requests                                    送出體驗課申請（公開，LIFF 可呼叫，不需綁定會員）
+GET    /api/trial-requests                                    申請列表（requireCoach，query: status）
+GET    /api/trial-requests/export                             匯出 .xlsx（requireCoach）
+PATCH  /api/trial-requests/:id                                更新狀態（requireCoach，body: status）
+DELETE /api/trial-requests/:id                                刪除申請（requireCoach）
 ```
 
 ---
@@ -227,9 +235,9 @@ DELETE /api/group-classes/enrollments/:enrollmentId          移除報名（requ
 - `stores/user.js`：`loading` 預設 `true`，避免 LIFF init 完成前 router guard 就跳轉
 - `App.vue`：先判斷 `initError` → `loading` → 才渲染 `RouterView`，解決 Render 冷啟動問題
 - `vercel.json`：SPA routing 需要 rewrites，否則重新整理會 404
-- API 模組：`memberApi`、`checkinApi`、`leaveApi`、`spaceApi`、`groupClassApi`、`coachBindApi`
-- 頁面：`/`（簽到）、`/bind`（綁定）、`/history`（出勤記錄）、`/classes`（我的課程）、`/space-booking`（場地租借）、`/leave`（請假申請）、`/group-classes`（團課報名）、`/coach-bind`（教練 LINE 綁定）
-- `/space-booking`、`/group-classes`、`/coach-bind` 允許**未綁定學員**進入（router guard 特例），使用 `liff.getProfile()` 取得 LINE UID
+- API 模組：`memberApi`、`checkinApi`、`leaveApi`、`spaceApi`、`groupClassApi`、`coachBindApi`、`classRequestApi`、`trialRequestApi`
+- 頁面：`/`（簽到）、`/bind`（綁定）、`/history`（出勤記錄）、`/classes`（我的課程）、`/space-booking`（場地租借）、`/leave`（請假申請）、`/group-classes`（團課報名）、`/coach-bind`（教練 LINE 綁定）、`/private-lessons`（私人課程申請，需已綁定會員）、`/trial-request`（體驗課申請）
+- `/space-booking`、`/group-classes`、`/coach-bind`、`/trial-request` 允許**未綁定學員**進入（router guard 特例，見 `router/index.js` 的 `unboundAllowed` 陣列），使用 `liff.getProfile()` 取得 LINE UID
 - `/space-booking` 進入 step 3 時自動帶入 LINE displayName（非會員）或 member.name（已綁定學員），顯示提示「您以非會員身份預約」
 - `/leave` 為獨立請假申請頁，橘色主題，含請假歷史記錄與取消功能
 - `/coach-bind`：讀取 URL `?token=`，呼叫 `liff.getProfile()` 取得 userId，呼叫 `POST /api/coach-bind` 完成綁定，顯示成功/失敗狀態
@@ -238,7 +246,7 @@ DELETE /api/group-classes/enrollments/:enrollmentId          移除報名（requ
 - 入口 URL 帶 `?gym=<gym_id>` 設定健身房，router guard 讀取並存 localStorage
 - `stores/auth.js`：store 建立時立刻從 `localStorage` 讀 `coach_uid` 和 `gym_id`，並同步設好 axios header
 - 登入方式：密碼（存在 `gyms` 表的 `admin_password`），不需要輸入 LINE UID
-- 路由：`/login`、`/`（dashboard）、`/members`、`/members/:id`、`/packages`、`/qr`、`/report`、`/classes`、`/coaches`、`/spaces`（場地管理）、`/space-bookings`（場地預約管理）
+- 路由：`/login`、`/`（首頁，含出勤統計＋三合一課表月曆）、`/members`、`/members/:id`、`/packages`、`/qr`、`/report`、`/coaches`、`/spaces`（場地管理）、`/space-bookings`（場地預約管理）、`/group-classes`（團課管理）、`/trial-requests`（體驗課申請）；`/classes` 已改為 `redirect` 回 `/`（保留路徑相容舊的 LINE 通知連結）
 - 側欄依 `permissions` 動態顯示；`is_owner` 才看得到「教練管理」
 - `stores/auth.js` 登入後存 `permissions`（JSONB array）與 `is_owner` 至 localStorage
 - **Operator 後台**（路由不受教練 auth guard 控制）：
@@ -311,19 +319,19 @@ DELETE /api/group-classes/enrollments/:enrollmentId          移除報名（requ
   - 團課（`groupClassController.js`）開新期時，`findConflictingSessions` 會把整期堂次時間拿去跟「其他團課的堂次」+「私人課程」都比對一次，只要時段不是完全空的就整批擋掉（不會建立 term 或 session），錯誤訊息附上衝突的堂次時間與撞到的對象（團課名稱或私人課程標題）
   - 沒填結束時間的私人課程預設當作 1 小時計算重疊
 - [x] 首頁三合一課表總覽：私人課程／場地預約／團課堂次合併進同一個 FullCalendar（原本的「排課管理」頁面整個搬進首頁），新增 `GET /api/group-classes/sessions` 給團課堂次的月份查詢；排課管理、團課管理、場地管理三個獨立頁面都保留（各自的 CRUD／報名名單/繳費狀態管理月曆做不到），月曆點團課事件可以 deep-link 到團課管理並自動展開對應期別
+- [x] 私人課程申請 LIFF 頁面：`/private-lessons`（需先綁定會員），選教練＋最多 3 個備選時間，圖文選單 ④ 已接上
+- [x] 體驗課申請表單 + Excel 匯出：新表 `trial_class_requests`；LIFF `/trial-request`（允許未綁定學員填寫，圖文選單 ③ 已接上，取代原本的「即將開放」訊息），欄位為姓名/電話/LINE ID 或聯絡方式/方便聯繫時間（複選）/偏好教練性別（單選）/期望體驗時間（複選）/備註；送出後推播 Flex Message 通知該健身房所有已綁定真實 LINE UID 的教練；Admin 新頁面 `/trial-requests`（權限 `trials:view` 查看匯出、`trials:manage` 改狀態刪除），可依待聯繫/已聯繫/已結案篩選，右上角「匯出 Excel」用 `exceljs` 產生 .xlsx（欄位轉中文標籤）
 
 ---
 
 ## 待完成功能
 
 - [ ] 圖文選單依角色分流（教練看到教練選單，學員看到學員選單）
-- [ ] 體驗課申請表單 + Excel 匯出
 - [ ] 首頁改為排課表（學員 LIFF 主頁顯示即將上課的課程）
 - [ ] 場地預約通知私人 LINE（確認時通知租借人）
 - [ ] 匯入既有簽到資料
 - [ ] 廣告功能
 - [ ] 營運後台 RWD
-- [ ] 私人課程申請 LIFF 頁面（目前圖文選單顯示「即將開放」）
 - [ ] 場地介紹 LIFF 頁面（目前圖文選單顯示「即將開放」）
 
 ## 權限 Key 清單
@@ -351,6 +359,8 @@ DELETE /api/group-classes/enrollments/:enrollmentId          移除報名（requ
 | | `coaches:create` | 新增教練 |
 | | `coaches:edit` | 編輯教練（含重設密碼、改權限） |
 | | `coaches:delete` | 刪除教練 |
+| 體驗課申請 | `trials:view` | 查看申請列表、匯出 Excel |
+| | `trials:manage` | 更改狀態、刪除申請 |
 
 ---
 

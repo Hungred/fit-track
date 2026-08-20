@@ -28,6 +28,7 @@ const allNavItems = [
   { path: '/spaces', label: '場地管理', icon: '🏢', permission: 'classes:view' },
   { path: '/space-bookings', label: '場地預約', icon: '📋', permission: 'classes:view' },
   { path: '/group-classes', label: '團課管理', icon: '🏃', permission: 'classes:view' },
+  { path: '/trial-requests', label: '體驗課申請', icon: '🎟️', permission: 'trials:view' },
 ]
 
 const navItems = computed(() =>

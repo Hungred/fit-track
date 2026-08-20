@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { CONTACT_TIME_LABELS, COACH_GENDER_LABELS, TRIAL_TIME_LABELS, formatSlots } from './trialRequestLabels.js'
 
 export function welcomeMessage(displayName, gymName, liffUrl) {
   return {
@@ -492,6 +493,63 @@ export function privateRequestNotifyMessage(memberName, preferred_dates, notes, 
         type: 'box', layout: 'vertical',
         contents: [{
           type: 'button', style: 'primary', color: '#16a34a',
+          action: { type: 'uri', label: '前往後台處理', uri: adminUrl },
+        }],
+      },
+    },
+  }
+}
+
+export function trialRequestNotifyMessage(req, adminUrl) {
+  const rows = [
+    ['聯絡電話', req.phone],
+    ['LINE ID / 聯絡方式', req.contact_info],
+    ['方便聯繫時間', formatSlots(req.contact_time_slots, CONTACT_TIME_LABELS)],
+    ['偏好教練性別', COACH_GENDER_LABELS[req.coach_gender_preference] || req.coach_gender_preference],
+    ['期望體驗時間', formatSlots(req.trial_time_slots, TRIAL_TIME_LABELS)],
+  ]
+
+  const bodyContents = [
+    { type: 'text', text: `${req.name} 申請了體驗課`, weight: 'bold', size: 'md', color: '#1f2937' },
+    {
+      type: 'box', layout: 'vertical', margin: 'lg', spacing: 'sm',
+      contents: rows.map(([label, value]) => ({
+        type: 'box', layout: 'vertical', spacing: 'xs',
+        contents: [
+          { type: 'text', text: label, size: 'xs', color: '#6b7280', weight: 'bold' },
+          { type: 'text', text: value || '—', size: 'sm', color: '#374151', wrap: true },
+        ],
+      })),
+    },
+  ]
+
+  if (req.notes) {
+    bodyContents.push({
+      type: 'box', layout: 'vertical', margin: 'md', spacing: 'xs',
+      contents: [
+        { type: 'text', text: '備註', size: 'xs', color: '#6b7280', weight: 'bold' },
+        { type: 'text', text: req.notes, size: 'sm', color: '#374151', wrap: true, margin: 'xs' },
+      ],
+    })
+  }
+
+  return {
+    type: 'flex',
+    altText: `📩 ${req.name} 申請了體驗課`,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box', layout: 'vertical', backgroundColor: '#ea580c',
+        contents: [{ type: 'text', text: '🏋️ 體驗課申請', color: '#ffffff', weight: 'bold', size: 'md' }],
+      },
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'sm',
+        contents: bodyContents,
+      },
+      footer: {
+        type: 'box', layout: 'vertical',
+        contents: [{
+          type: 'button', style: 'primary', color: '#ea580c',
           action: { type: 'uri', label: '前往後台處理', uri: adminUrl },
         }],
       },

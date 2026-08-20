@@ -14,6 +14,7 @@ const routes = [
   { path: '/spaces', component: () => import('../pages/SpacesPage.vue'), meta: { permission: 'classes:view' } },
   { path: '/space-bookings', component: () => import('../pages/SpaceBookingsPage.vue'), meta: { permission: 'classes:view' } },
   { path: '/group-classes', component: () => import('../pages/GroupClassesPage.vue'), meta: { permission: 'classes:view' } },
+  { path: '/trial-requests', component: () => import('../pages/TrialRequestsPage.vue'), meta: { permission: 'trials:view' } },
   { path: '/operator/login', component: () => import('../pages/OperatorLoginPage.vue') },
   { path: '/operator', component: () => import('../pages/OperatorPage.vue') },
   { path: '/operator/logs', component: () => import('../pages/OperatorLogsPage.vue') },

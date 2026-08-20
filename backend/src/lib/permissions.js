@@ -20,4 +20,6 @@ export const ALL_PERMISSIONS = [
   'classes:create',
   'classes:edit',
   'classes:delete',
+  'trials:view',
+  'trials:manage',
 ]

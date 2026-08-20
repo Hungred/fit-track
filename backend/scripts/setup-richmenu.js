@@ -80,10 +80,10 @@ async function main() {
         bounds: { x: 833, y: 0, width: 833, height: 843 },
         action: { type: 'uri', uri: `${LIFF}/group-classes?gym=${GYM_ID}` },
       },
-      // ③ 體驗課（左下）暫停用
+      // ③ 體驗課（左下）
       {
         bounds: { x: 0, y: 843, width: 833, height: 843 },
-        action: { type: 'message', text: COMING_SOON },
+        action: { type: 'uri', uri: `${LIFF}/trial-request?gym=${GYM_ID}` },
       },
       // ④ 私人課程（中下）
       {

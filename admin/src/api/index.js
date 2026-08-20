@@ -105,6 +105,13 @@ export const groupClassApi = {
   deleteEnrollment: (id) => api.delete(`/api/group-classes/enrollments/${id}`),
 }
 
+export const trialRequestApi = {
+  list: (status) => api.get('/api/trial-requests', { params: status ? { status } : {} }),
+  updateStatus: (id, status) => api.patch(`/api/trial-requests/${id}`, { status }),
+  delete: (id) => api.delete(`/api/trial-requests/${id}`),
+  export: () => api.get('/api/trial-requests/export', { responseType: 'blob' }),
+}
+
 export const gymSettingsApi = {
   getSpaceSettings: () => api.get('/api/coach/space-settings'),
   updateSpaceSettings: (data) => api.patch('/api/coach/space-settings', data),
