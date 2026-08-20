@@ -90,6 +90,7 @@ export const spaceApi = {
 
 export const groupClassApi = {
   list: () => api.get('/api/group-classes'),
+  listSessions: (month) => api.get('/api/group-classes/sessions', { params: { month } }),
   create: (data) => api.post('/api/group-classes', data),
   update: (id, data) => api.patch(`/api/group-classes/${id}`, data),
   delete: (id) => api.delete(`/api/group-classes/${id}`),

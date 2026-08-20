@@ -1,8 +1,60 @@
 import supabase from '../lib/supabase.js'
 
 const DAYS = ['日', '一', '二', '三', '四', '五', '六']
+const MS_HOUR = 3600000
+
+// 檢查 sessionTimes（即將建立的堂次時間）是否與其他團課的既有堂次重疊
+async function findConflictingSessions(gymId, groupClassId, sessionTimes, durationMinutes) {
+  if (!sessionTimes.length) return []
+  const times = sessionTimes.map(t => new Date(t).getTime())
+  const windowStart = new Date(Math.min(...times) - MS_HOUR).toISOString()
+  const windowEnd = new Date(Math.max(...times) + durationMinutes * 60000 + MS_HOUR).toISOString()
+
+  const { data: existing, error } = await supabase
+    .from('group_class_sessions')
+    .select('id, scheduled_at, term:term_id(group_class:group_class_id(id, name, duration_minutes))')
+    .eq('gym_id', gymId)
+    .gte('scheduled_at', windowStart)
+    .lte('scheduled_at', windowEnd)
+  if (error) throw new Error(error.message)
+
+  const conflicts = []
+  for (const t of sessionTimes) {
+    const s1 = new Date(t).getTime()
+    const e1 = s1 + durationMinutes * 60000
+    for (const ex of existing || []) {
+      const otherClass = ex.term?.group_class
+      if (!otherClass || otherClass.id === groupClassId) continue
+      const s2 = new Date(ex.scheduled_at).getTime()
+      const e2 = s2 + (otherClass.duration_minutes || 60) * 60000
+      if (s1 < e2 && e1 > s2) {
+        conflicts.push({ scheduled_at: t, conflict_with: otherClass.name })
+      }
+    }
+  }
+  return conflicts
+}
 
 // ── Group Classes ──────────────────────────────────────────
+
+export async function listSessionsForMonth(req, res) {
+  const { month } = req.query
+  const base = month || new Date().toISOString().slice(0, 7)
+  const [year, mon] = base.split('-').map(Number)
+  const start = `${base}-01`
+  const end = new Date(year, mon, 1).toISOString().slice(0, 10)
+
+  const { data, error } = await supabase
+    .from('group_class_sessions')
+    .select('*, term:term_id(group_class:group_class_id(id, name, coach:coach_id(name), max_students))')
+    .eq('gym_id', req.gym.id)
+    .gte('scheduled_at', start)
+    .lt('scheduled_at', end)
+    .order('scheduled_at')
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.json({ sessions: data })
+}
 
 export async function listGroupClasses(req, res) {
   const { data, error } = await supabase
@@ -93,6 +145,37 @@ export async function createTerm(req, res) {
     .single()
   if (gcErr || !gc) return res.status(404).json({ error: '找不到團課' })
 
+  // 先算出這一期所有堂次的時間（尚未寫入 DB）
+  const sessionTimes = []
+  if (gc.day_of_week !== null && gc.start_time) {
+    let date = new Date(start_date + 'T00:00:00+08:00')
+    let count = 0
+    while (count < gc.sessions_per_term) {
+      if (date.getDay() === gc.day_of_week) {
+        const [h, m] = gc.start_time.split(':')
+        const scheduledAt = new Date(date)
+        scheduledAt.setHours(parseInt(h), parseInt(m), 0, 0)
+        sessionTimes.push(scheduledAt.toISOString())
+        count++
+      }
+      date.setDate(date.getDate() + 1)
+    }
+  }
+
+  // 檢查是否與其他團課的堂次重疊（同時段最多開放 1 組團課）
+  if (sessionTimes.length) {
+    const conflicts = await findConflictingSessions(req.gym.id, classId, sessionTimes, gc.duration_minutes || 60)
+    if (conflicts.length) {
+      const detail = conflicts
+        .map(c => `${new Date(c.scheduled_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })}（撞「${c.conflict_with}」）`)
+        .join('、')
+      return res.status(409).json({
+        error: `開新期失敗，以下堂次與其他團課時段重疊：${detail}`,
+        conflicts,
+      })
+    }
+  }
+
   // 計算期次
   const { count } = await supabase
     .from('group_class_terms')
@@ -108,29 +191,15 @@ export async function createTerm(req, res) {
     .single()
   if (termErr) return res.status(500).json({ error: termErr.message })
 
-  // 自動產生 sessions（根據 day_of_week）
-  if (gc.day_of_week !== null && gc.start_time) {
-    const sessions = []
-    let date = new Date(start_date + 'T00:00:00+08:00')
-    let count = 0
-    while (count < gc.sessions_per_term) {
-      if (date.getDay() === gc.day_of_week) {
-        const [h, m] = gc.start_time.split(':')
-        const scheduledAt = new Date(date)
-        scheduledAt.setHours(parseInt(h), parseInt(m), 0, 0)
-        sessions.push({
-          gym_id: req.gym.id,
-          term_id: term.id,
-          session_number: count + 1,
-          scheduled_at: scheduledAt.toISOString(),
-        })
-        count++
-      }
-      date.setDate(date.getDate() + 1)
-    }
-    if (sessions.length) {
-      await supabase.from('group_class_sessions').insert(sessions)
-    }
+  // 自動產生 sessions
+  if (sessionTimes.length) {
+    const sessions = sessionTimes.map((scheduledAt, i) => ({
+      gym_id: req.gym.id,
+      term_id: term.id,
+      session_number: i + 1,
+      scheduled_at: scheduledAt,
+    }))
+    await supabase.from('group_class_sessions').insert(sessions)
   }
 
   res.json({ term })

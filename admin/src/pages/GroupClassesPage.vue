@@ -1,6 +1,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { groupClassApi } from '../api/index.js'
+
+const route = useRoute()
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Layout from '../components/Layout.vue'
 
@@ -185,7 +188,18 @@ async function removeEnrollment(enrollment) {
   }
 }
 
-onMounted(() => { loadClasses(); loadCoaches() })
+onMounted(async () => {
+  await Promise.all([loadClasses(), loadCoaches()])
+
+  const { classId, termId } = route.query
+  if (!classId) return
+  const gc = classes.value.find(c => c.id === classId)
+  if (!gc) return
+  await selectClass(gc)
+  if (!termId) return
+  const term = terms.value.find(t => t.id === termId)
+  if (term) await selectTerm(term)
+})
 </script>
 
 <template>

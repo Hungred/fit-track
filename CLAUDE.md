@@ -205,6 +205,7 @@ DELETE /api/spaces/bookings/:id         刪除預約（requireCoach）
 GET    /api/group-classes/public                              公開團課列表（LIFF 學員瀏覽，含開放期別）
 POST   /api/group-classes/terms/:termId/enroll               學員報名期別（公開，LIFF 可呼叫）
 GET    /api/group-classes                                     團課列表（requireCoach）
+GET    /api/group-classes/sessions                            當月團課堂次列表（requireCoach，query: month，join 出團課名稱/教練，給首頁合併課表用）
 POST   /api/group-classes                                     新增團課（requireCoach）
 PATCH  /api/group-classes/:id                                更新團課（requireCoach）
 DELETE /api/group-classes/:id                                刪除團課（requireCoach）
@@ -258,7 +259,7 @@ DELETE /api/group-classes/enrollments/:enrollmentId          移除報名（requ
   - router guard 偵測到 `?gym=` 時更新 `<link rel="manifest">` href 指向動態 manifest URL
 - **PWA safe area**：`viewport-fit=cover` 讓內容延伸到狀態列，fixed header 需加 `padding-top: env(safe-area-inset-top)`；`Layout.vue` 手機 header 和 main 都已加，`OperatorPage` / `OperatorLoginPage` header 也已加
 - **Admin 頂部 padding**：`Layout.vue` 的 `<main>` 移除 `lg:pt-0`，桌面版和手機版都加 padding，手機版用 `padding-top: calc(3.5rem + env(safe-area-inset-top) + 1rem)` 確保標題不貼頂
-- **ClassesPage 月曆雙事件來源**：`loadEvents()` 同時撈課程 + 場地預約，預約以紫色顯示（pending 淺紫 `#a78bfa`，confirmed 深紫 `#7c3aed`），點擊顯示預約詳情 dialog
+- **首頁三合一課表總覽**：原本獨立的「排課管理」頁面（`ClassesPage.vue`）已整個搬進 `DashboardPage.vue`，`/classes` 路由改成 `redirect: (to) => ({ path: '/', query: to.query })`（保留 `?gym=` 給 `classRequestController.js` 的 LINE Flex Message 連結用，側欄拿掉「排課管理」項目，`/` 改名「首頁」）。`loadEvents()` 現在平行撈三個來源：私人課程、場地預約、團課堂次（`groupClassApi.listSessions`），私人課程灰/橘/綠依確認狀態、場地預約紫色（pending 淺紫 `#a78bfa`，confirmed 深紫 `#7c3aed`）、團課堂次青色 `#0d9488`。點團課事件開一個輕量 detail dialog，「查看報名名單」按鈕帶 `?classId=&termId=` 導去 `/group-classes`，`GroupClassesPage.vue` 的 `onMounted` 讀這兩個 query 自動展開對應期別/報名名單面板。整段月曆用 `v-if="auth.hasPermission('classes:view')"` 包起來，沒權限的教練首頁只看到出勤統計卡
 - **401 interceptor**：`api/index.js` 的 401 handler 只在非 `/operator*` 路徑才跳轉到健身房登入頁，避免 operator API 失敗時跑到錯誤頁
 
 ---
@@ -305,6 +306,8 @@ DELETE /api/group-classes/enrollments/:enrollmentId          移除報名（requ
 - [x] 私人課程申請通知加後台連結：`classRequestController` 改用 Flex Message，footer 附「前往後台處理」按鈕，直接導向 Admin ClassesPage
 - [x] QR Code 簽到修正：`router.push({ path, query })` 保留 token query param；QR URL 改用 LIFF gateway（`liff.line.me/{liff_id}`）確保 LINE 內開啟有 LIFF context
 - [x] 場地預約非會員支援：教練不需綁定 LINE 即可預約場地，step 3 自動帶入 LINE displayName，顯示「非會員身份預約」提示
+- [x] 同時段衝突限制：場地預約 `updateBooking` 補上時段重疊檢查（原本只有 `createBooking` 有，改時間可無限重疊）；私人課程同時段最多 4 組（`classController.js` 的 `countOverlappingClasses`，套用在新增/批次新增/編輯，沒填結束時間預設 1 小時），批次新增時超額的時段會跳過並回傳 `skipped` 清單；團課同時段最多 1 組，`createTerm` 開新期前會先算好整期堂次時間並跟其他團課比對，重疊就整批擋掉（不會建立 term 或 session），錯誤訊息附上衝突的堂次時間與撞期的團課名稱
+- [x] 首頁三合一課表總覽：私人課程／場地預約／團課堂次合併進同一個 FullCalendar（原本的「排課管理」頁面整個搬進首頁），新增 `GET /api/group-classes/sessions` 給團課堂次的月份查詢；排課管理、團課管理、場地管理三個獨立頁面都保留（各自的 CRUD／報名名單/繳費狀態管理月曆做不到），月曆點團課事件可以 deep-link 到團課管理並自動展開對應期別
 
 ---
 
@@ -386,3 +389,5 @@ DELETE /api/group-classes/enrollments/:enrollmentId          移除報名（requ
 33. **`router.push(path)` 丟失 query params**：`router.push('/target')` 只推 path，`?token=xxx` 等 query 全部丟失。必須用 `router.push({ path: targetPath, query: Object.fromEntries(searchParams) })` 物件形式才會保留
 34. **LIFF QR URL 要用 LIFF gateway**：QR Code URL 若直接指向 Vercel（`fit-track-liff.vercel.app`），在 LINE 內開啟不會初始化 LIFF context，`liff.getProfile()` 會失敗。正確格式：`liff.line.me/{liff_id}/path?params`，確保 LINE 識別為 LIFF app 並做 OAuth redirect
 35. **Git push 被拒（GitHub Actions 自動 commit）**：GitHub Actions 會自動 commit `DEVLOG.md`，push 前不 pull 會報 `rejected: non-fast-forward`。每次 push 前先 `git pull --rebase origin main`
+36. **團課資料表從未真正建立**：`groupClassController.js` 跟 CLAUDE.md 都假設 `group_classes`／`group_class_terms`／`group_class_sessions`／`group_class_enrollments` 4 張表存在，但 production Supabase 專案裡實際從未執行對應的 `CREATE TABLE`，導致團課相關 API 全部會 500（`Could not find the table`）。已用 `backend/create_group_class_tables.sql` 補建；之後新增功能前，若懷疑某張表沒建好，可用 `curl "$SUPABASE_URL/rest/v1/" -H "apikey: $KEY"` 打 PostgREST 的 OpenAPI root，`definitions` 裡列出的才是真的存在的表
+37. **Supabase 直連只給 IPv6**：新專案的 `db.<ref>.supabase.co` 只有 AAAA 記錄沒有 A 記錄，沒有 IPv6 對外連線的環境會直接連線失敗（DNS 查得到、TCP 連不上）；本機/沙盒環境要跑 migration SQL 只能靠 Dashboard 的 SQL Editor，或改用有 IPv4 的 Connection Pooler 網址

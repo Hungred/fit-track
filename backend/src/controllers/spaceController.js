@@ -121,6 +121,23 @@ export async function updateBooking(req, res) {
     .single()
   if (!existing) return res.status(404).json({ error: '找不到預約' })
 
+  const finalStart = start_at !== undefined ? start_at : existing.start_at
+  const finalEnd = end_at !== undefined ? end_at : existing.end_at
+  const finalStatus = status !== undefined ? status : existing.status
+
+  if ((start_at !== undefined || end_at !== undefined) && finalStatus !== 'cancelled') {
+    const { data: conflicts } = await supabase
+      .from('space_bookings')
+      .select('id')
+      .eq('space_id', existing.space_id)
+      .neq('id', id)
+      .neq('status', 'cancelled')
+      .lt('start_at', finalEnd)
+      .gt('end_at', finalStart)
+
+    if (conflicts?.length) return res.status(409).json({ error: '此時段已被預約' })
+  }
+
   const updates = {}
   if (status !== undefined) updates.status = status
   if (renter_name !== undefined) updates.renter_name = renter_name

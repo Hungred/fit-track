@@ -1,6 +1,33 @@
 import supabase from '../lib/supabase.js'
 import { pushMessage, classInviteMessage } from '../lib/line.js'
 
+const MS_HOUR = 3600000
+const MAX_CONCURRENT_CLASSES = 4
+
+async function countOverlappingClasses(gymId, startAt, endAt, excludeId) {
+  const s = new Date(startAt).getTime()
+  const e = endAt ? new Date(endAt).getTime() : s + MS_HOUR
+  const windowStart = new Date(s - 24 * MS_HOUR).toISOString()
+  const windowEnd = new Date(e + 24 * MS_HOUR).toISOString()
+
+  let query = supabase
+    .from('classes')
+    .select('id, start_at, end_at')
+    .eq('gym_id', gymId)
+    .gte('start_at', windowStart)
+    .lte('start_at', windowEnd)
+  if (excludeId) query = query.neq('id', excludeId)
+
+  const { data, error } = await query
+  if (error) throw new Error(error.message)
+
+  return (data || []).filter(c => {
+    const cs = new Date(c.start_at).getTime()
+    const ce = c.end_at ? new Date(c.end_at).getTime() : cs + MS_HOUR
+    return cs < e && ce > s
+  }).length
+}
+
 export async function listClasses(req, res) {
   const { month } = req.query
   const base = month || new Date().toISOString().slice(0, 7)
@@ -35,6 +62,11 @@ export async function getClass(req, res) {
 export async function createClass(req, res) {
   const { title, start_at, end_at, max_students, notes, member_ids } = req.body
   if (!start_at) return res.status(400).json({ error: '開始時間為必填' })
+
+  const overlapping = await countOverlappingClasses(req.gym.id, start_at, end_at)
+  if (overlapping >= MAX_CONCURRENT_CLASSES) {
+    return res.status(409).json({ error: `此時段私人課已達上限（${MAX_CONCURRENT_CLASSES} 組），請選擇其他時間` })
+  }
 
   const { data: cls, error } = await supabase
     .from('classes')
@@ -82,9 +114,16 @@ export async function batchCreateClasses(req, res) {
   if (!classes?.length) return res.status(400).json({ error: '請提供至少一筆課程' })
 
   const results = []
+  const skipped = []
   for (const cls of classes) {
     const { title, start_at, end_at, max_students, notes, member_ids } = cls
     if (!start_at) continue
+
+    const overlapping = await countOverlappingClasses(req.gym.id, start_at, end_at)
+    if (overlapping >= MAX_CONCURRENT_CLASSES) {
+      skipped.push({ start_at, reason: `此時段私人課已達上限（${MAX_CONCURRENT_CLASSES} 組）` })
+      continue
+    }
 
     const { data: created, error } = await supabase
       .from('classes')
@@ -125,11 +164,30 @@ export async function batchCreateClasses(req, res) {
     }
   }
 
-  res.json({ created: results.length, classes: results })
+  res.json({ created: results.length, classes: results, skipped })
 }
 
 export async function updateClass(req, res) {
   const { title, start_at, end_at, max_students, notes } = req.body
+
+  if (start_at !== undefined || end_at !== undefined) {
+    const { data: existing } = await supabase
+      .from('classes')
+      .select('start_at, end_at')
+      .eq('id', req.params.id)
+      .eq('gym_id', req.gym.id)
+      .single()
+    if (!existing) return res.status(404).json({ error: '找不到課程' })
+
+    const finalStart = start_at !== undefined ? start_at : existing.start_at
+    const finalEnd = end_at !== undefined ? end_at : existing.end_at
+
+    const overlapping = await countOverlappingClasses(req.gym.id, finalStart, finalEnd, req.params.id)
+    if (overlapping >= MAX_CONCURRENT_CLASSES) {
+      return res.status(409).json({ error: `此時段私人課已達上限（${MAX_CONCURRENT_CLASSES} 組），請選擇其他時間` })
+    }
+  }
+
   const updates = {}
   if (title !== undefined) updates.title = title
   if (start_at !== undefined) updates.start_at = start_at

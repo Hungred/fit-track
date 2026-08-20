@@ -4,7 +4,7 @@ import {
   listGroupClasses, createGroupClass, updateGroupClass, deleteGroupClass,
   listTerms, createTerm, updateTerm, deleteTerm,
   listEnrollments, createEnrollment, updateEnrollment, deleteEnrollment,
-  listPublicGroupClasses,
+  listPublicGroupClasses, listSessionsForMonth,
 } from '../controllers/groupClassController.js'
 
 const router = Router()
@@ -16,6 +16,7 @@ router.post('/terms/:termId/enroll', createEnrollment)
 // 教練後台
 router.use(requireCoach)
 router.get('/', listGroupClasses)
+router.get('/sessions', listSessionsForMonth)
 router.post('/', createGroupClass)
 router.patch('/:id', updateGroupClass)
 router.delete('/:id', deleteGroupClass)
