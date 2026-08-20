@@ -306,7 +306,7 @@ DELETE /api/trial-requests/:id                                刪除申請（req
 - [x] PWA 支援（加入主畫面捷徑，各自獨立圖示與 manifest）
 - [x] 場地租借系統：`spaces` + `space_bookings` 資料表；Admin 後台 SpacesPage（場地 CRUD）與 SpaceBookingsPage（預約管理、確認推播 LINE）；ClassesPage 月曆整合場地預約（紫色事件）；LIFF `/space-booking` 4 步驟預約流程（選場地→選時間→填資料→成功），允許未綁定學員操作
 - [x] LIFF `/leave` 獨立請假申請頁（橘色主題，含請假表單、歷史記錄、取消功能）
-- [x] LINE 圖文選單更新為 5 格非對稱版型（左 2 行 × 中 2 行 + 右全高）：場地租借、不定期團課、體驗課（暫停用）、私人課程（暫停用）、場地介紹（暫停用）；PNG 在 `~/Desktop/fit_track_richmenu_new.png`（2500×1686px，Python Pillow 產生，暖棕/米白棋盤格）；`backend/scripts/setup-richmenu.js` 透過 LINE Messaging API 建立自訂區域版型並上傳圖片；部署使用 `GYM_ID=xxx node scripts/setup-richmenu.js`
+- [x] LINE 圖文選單更新為 5 格非對稱版型（左 2 行 × 中 2 行 + 右全高）：場地租借、不定期團課、體驗課、私人課程、場地介紹（暫停用，唯一還沒做的）；PNG 在 `~/Desktop/fit_track_richmenu_new.png`（2500×1686px，Python Pillow 產生，暖棕/米白棋盤格）；`backend/scripts/setup-richmenu.js` 透過 LINE Messaging API 建立自訂區域版型並上傳圖片；部署使用 `GYM_ID=xxx node scripts/setup-richmenu.js`（Fit Track 這個健身房已在 2026-08-20 執行過，`richMenuId: richmenu-302798d69e6c2eeed0325cd74aaa6ba8`，其他健身房要各自手動跑一次）
 - [x] 團課管理系統：`group_classes`、`group_class_terms`、`group_class_sessions`、`group_class_enrollments` 4 張資料表；Admin 後台 GroupClassesPage（3 欄：團課→期別→報名名單，開新期自動產生 sessions，付款狀態標記）；LIFF `/group-classes` 學員瀏覽報名頁（支援未綁定學員）
 - [x] 方案管理分類：`packages` 表新增 `category` 欄位（`general` 私人教練課 / `massage` 運動按摩 / `boxing` 拳擊課）；Admin PackagesPage 加 4 個 Tab 篩選，前端用 `computed` 做 client-side 過濾；方案卡片顯示分類 badge（藍/紫/紅）；建立 / 編輯 dialog 加類別選擇器
 - [x] 教練 LINE UID 綁定：Method A（Webhook 傳送「我的ID」，Bot 回覆發話者的 LINE UID）；Method B（後台產生一次性 LIFF 綁定連結，教練用 LINE 掃開後自動完成綁定）；CoachesPage 顯示 LINE UID 欄位與「產生綁定連結」按鈕（owner only）
