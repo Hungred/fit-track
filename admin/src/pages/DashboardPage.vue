@@ -186,10 +186,12 @@ async function submitBatch() {
   submitting.value = true
   try {
     const res = await classApi.batchCreate(classes)
-    ElMessage.success(`已建立 ${res.data.created} 堂課程並推播通知`)
+    if (res.data.created > 0) {
+      ElMessage.success(`已建立 ${res.data.created} 堂課程並推播通知`)
+    }
     if (res.data.skipped?.length) {
-      const times = res.data.skipped.map(s => dayjs(s.start_at).format('MM/DD HH:mm')).join('、')
-      ElMessage.warning(`以下時段私人課已達上限（4 組），未建立：${times}`)
+      const lines = res.data.skipped.map(s => `${dayjs(s.start_at).format('MM/DD HH:mm')}：${s.reason}`).join('；')
+      ElMessage({ type: 'error', message: `以下時段未建立 — ${lines}`, duration: 0, showClose: true })
     }
     showForm.value = false
     batchStep.value = 1
