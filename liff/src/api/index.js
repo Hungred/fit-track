@@ -57,3 +57,7 @@ export const coachBindApi = {
 export const trialRequestApi = {
   submit: (data) => api.post('/api/trial-requests', data),
 }
+
+export const facilityApi = {
+  list: () => api.get('/api/facility-photos'),
+}

@@ -224,6 +224,9 @@ GET    /api/trial-requests                                    申請列表（req
 GET    /api/trial-requests/export                             匯出 .xlsx（requireCoach）
 PATCH  /api/trial-requests/:id                                更新狀態（requireCoach，body: status）
 DELETE /api/trial-requests/:id                                刪除申請（requireCoach）
+
+# 場地介紹（需 x-gym-id）
+GET    /api/facility-photos                                   場地照片網址列表（公開，讀 Supabase Storage facility-photos bucket）
 ```
 
 ---
@@ -235,9 +238,9 @@ DELETE /api/trial-requests/:id                                刪除申請（req
 - `stores/user.js`：`loading` 預設 `true`，避免 LIFF init 完成前 router guard 就跳轉
 - `App.vue`：先判斷 `initError` → `loading` → 才渲染 `RouterView`，解決 Render 冷啟動問題
 - `vercel.json`：SPA routing 需要 rewrites，否則重新整理會 404
-- API 模組：`memberApi`、`checkinApi`、`leaveApi`、`spaceApi`、`groupClassApi`、`coachBindApi`、`classRequestApi`、`trialRequestApi`
-- 頁面：`/`（簽到）、`/bind`（綁定）、`/history`（出勤記錄）、`/classes`（我的課程）、`/space-booking`（場地租借）、`/leave`（請假申請）、`/group-classes`（團課報名）、`/coach-bind`（教練 LINE 綁定）、`/private-lessons`（私人課程申請，需已綁定會員）、`/trial-request`（體驗課申請）
-- `/space-booking`、`/group-classes`、`/coach-bind`、`/trial-request` 允許**未綁定學員**進入（router guard 特例，見 `router/index.js` 的 `unboundAllowed` 陣列），使用 `liff.getProfile()` 取得 LINE UID
+- API 模組：`memberApi`、`checkinApi`、`leaveApi`、`spaceApi`、`groupClassApi`、`coachBindApi`、`classRequestApi`、`trialRequestApi`、`facilityApi`
+- 頁面：`/`（簽到）、`/bind`（綁定）、`/history`（出勤記錄）、`/classes`（我的課程）、`/space-booking`（場地租借）、`/leave`（請假申請）、`/group-classes`（團課報名）、`/coach-bind`（教練 LINE 綁定）、`/private-lessons`（私人課程申請，需已綁定會員）、`/trial-request`（體驗課申請）、`/facility`（場地介紹）
+- `/space-booking`、`/group-classes`、`/coach-bind`、`/trial-request`、`/facility` 允許**未綁定學員**進入（router guard 特例，見 `router/index.js` 的 `unboundAllowed` 陣列），使用 `liff.getProfile()` 取得 LINE UID
 - `/space-booking` 進入 step 3 時自動帶入 LINE displayName（非會員）或 member.name（已綁定學員），顯示提示「您以非會員身份預約」
 - `/leave` 為獨立請假申請頁，橘色主題，含請假歷史記錄與取消功能
 - `/coach-bind`：讀取 URL `?token=`，呼叫 `liff.getProfile()` 取得 userId，呼叫 `POST /api/coach-bind` 完成綁定，顯示成功/失敗狀態
@@ -306,7 +309,7 @@ DELETE /api/trial-requests/:id                                刪除申請（req
 - [x] PWA 支援（加入主畫面捷徑，各自獨立圖示與 manifest）
 - [x] 場地租借系統：`spaces` + `space_bookings` 資料表；Admin 後台 SpacesPage（場地 CRUD）與 SpaceBookingsPage（預約管理、確認推播 LINE）；ClassesPage 月曆整合場地預約（紫色事件）；LIFF `/space-booking` 4 步驟預約流程（選場地→選時間→填資料→成功），允許未綁定學員操作
 - [x] LIFF `/leave` 獨立請假申請頁（橘色主題，含請假表單、歷史記錄、取消功能）
-- [x] LINE 圖文選單更新為 5 格非對稱版型（左 2 行 × 中 2 行 + 右全高）：場地租借、不定期團課、體驗課、私人課程、場地介紹（暫停用，唯一還沒做的）；PNG 在 `~/Desktop/fit_track_richmenu_new.png`（2500×1686px，Python Pillow 產生，暖棕/米白棋盤格）；`backend/scripts/setup-richmenu.js` 透過 LINE Messaging API 建立自訂區域版型並上傳圖片；部署使用 `GYM_ID=xxx node scripts/setup-richmenu.js`（Fit Track 這個健身房已在 2026-08-20 執行過，`richMenuId: richmenu-302798d69e6c2eeed0325cd74aaa6ba8`，其他健身房要各自手動跑一次）
+- [x] LINE 圖文選單更新為 5 格非對稱版型（左 2 行 × 中 2 行 + 右全高）：場地租借、不定期團課、體驗課、私人課程、場地介紹，5 格都已接上真的頁面（`COMING_SOON` 常數已移除）；PNG 在 `~/Desktop/fit_track_richmenu_new.png`（2500×1686px，Python Pillow 產生，暖棕/米白棋盤格）；`backend/scripts/setup-richmenu.js` 透過 LINE Messaging API 建立自訂區域版型並上傳圖片；部署使用 `GYM_ID=xxx node scripts/setup-richmenu.js`（Fit Track 這個健身房已在 2026-08-21 執行過最新版，其他健身房要各自手動跑一次）
 - [x] 團課管理系統：`group_classes`、`group_class_terms`、`group_class_sessions`、`group_class_enrollments` 4 張資料表；Admin 後台 GroupClassesPage（3 欄：團課→期別→報名名單，開新期自動產生 sessions，付款狀態標記）；LIFF `/group-classes` 學員瀏覽報名頁（支援未綁定學員）
 - [x] 方案管理分類：`packages` 表新增 `category` 欄位（`general` 私人教練課 / `massage` 運動按摩 / `boxing` 拳擊課）；Admin PackagesPage 加 4 個 Tab 篩選，前端用 `computed` 做 client-side 過濾；方案卡片顯示分類 badge（藍/紫/紅）；建立 / 編輯 dialog 加類別選擇器
 - [x] 教練 LINE UID 綁定：Method A（Webhook 傳送「我的ID」，Bot 回覆發話者的 LINE UID）；Method B（後台產生一次性 LIFF 綁定連結，教練用 LINE 掃開後自動完成綁定）；CoachesPage 顯示 LINE UID 欄位與「產生綁定連結」按鈕（owner only）
@@ -321,6 +324,7 @@ DELETE /api/trial-requests/:id                                刪除申請（req
 - [x] 首頁三合一課表總覽：私人課程／場地預約／團課堂次合併進同一個 FullCalendar（原本的「排課管理」頁面整個搬進首頁），新增 `GET /api/group-classes/sessions` 給團課堂次的月份查詢；排課管理、團課管理、場地管理三個獨立頁面都保留（各自的 CRUD／報名名單/繳費狀態管理月曆做不到），月曆點團課事件可以 deep-link 到團課管理並自動展開對應期別
 - [x] 私人課程申請 LIFF 頁面：`/private-lessons`（需先綁定會員），選教練＋最多 3 個備選時間，圖文選單 ④ 已接上
 - [x] 體驗課申請表單 + Excel 匯出：新表 `trial_class_requests`；LIFF `/trial-request`（允許未綁定學員填寫，圖文選單 ③ 已接上，取代原本的「即將開放」訊息），欄位為姓名/電話/LINE ID 或聯絡方式/方便聯繫時間（複選）/偏好教練性別（單選）/期望體驗時間（複選）/備註；送出後推播 Flex Message 通知該健身房所有已綁定真實 LINE UID 的教練；Admin 新頁面 `/trial-requests`（權限 `trials:view` 查看匯出、`trials:manage` 改狀態刪除），可依待聯繫/已聯繫/已結案篩選，右上角「匯出 Excel」用 `exceljs` 產生 .xlsx（欄位轉中文標籤）
+- [x] 場地介紹 LIFF 頁面：純靜態展示、不需要資料表，照片放在 Supabase Storage 新開的 `facility-photos` public bucket（路徑 `<gym_id>/<檔名>.jpg`），`GET /api/facility-photos`（公開）用 `.list()` + `getPublicUrl()` 回傳該 gym 的所有圖片網址；`backend/scripts/upload-facility-photos.js`（用法 `GYM_ID=xxx SOURCE_DIR=xxx node scripts/upload-facility-photos.js`）用 `sips --resampleWidth 1000 -s formatOptions 70` 把原圖壓到約 100KB/張再上傳，避免 LIFF 頁面在手機上載入太慢；LIFF `/facility`（允許未綁定學員進入）用 2 欄網格 + `loading="lazy"`，點縮圖開純 Tailwind 寫的全螢幕 lightbox（左右箭頭切換、無額外套件）；圖文選單 ⑤ 已接上，`COMING_SOON` 常數已移除（5 格都是真連結了）
 
 ---
 
@@ -332,7 +336,6 @@ DELETE /api/trial-requests/:id                                刪除申請（req
 - [ ] 匯入既有簽到資料
 - [ ] 廣告功能
 - [ ] 營運後台 RWD
-- [ ] 場地介紹 LIFF 頁面（目前圖文選單顯示「即將開放」）
 
 ## 權限 Key 清單
 

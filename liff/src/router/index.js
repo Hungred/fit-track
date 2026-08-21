@@ -12,6 +12,7 @@ const routes = [
   { path: '/private-lessons', component: () => import('../pages/PrivateLessonsPage.vue') },
   { path: '/coach-bind', component: () => import('../pages/CoachBindPage.vue') },
   { path: '/trial-request', component: () => import('../pages/TrialRequestPage.vue') },
+  { path: '/facility', component: () => import('../pages/FacilityPage.vue') },
 ]
 
 const router = createRouter({
@@ -25,7 +26,7 @@ router.beforeEach(async (to) => {
   // 初始化中或有錯誤時不做跳轉，由 App.vue 顯示對應畫面
   if (store.loading || store.initError) return
 
-  const unboundAllowed = ['/bind', '/space-booking', '/group-classes', '/coach-bind', '/trial-request']
+  const unboundAllowed = ['/bind', '/space-booking', '/group-classes', '/coach-bind', '/trial-request', '/facility']
   if (!store.member && !unboundAllowed.includes(to.path)) {
     return '/bind'
   }

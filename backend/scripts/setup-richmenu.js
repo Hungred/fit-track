@@ -3,7 +3,7 @@
  * 用法：GYM_ID=<gym_id> node scripts/setup-richmenu.js
  *
  * 版型：
- *   ① 場地租借   ② 不定期團課  ⑤ 場地介紹（全高，暫停用）
+ *   ① 場地租借   ② 不定期團課  ⑤ 場地介紹（全高）
  *   ③ 體驗課     ④ 私人課程    ⑤
  */
 import 'dotenv/config'
@@ -24,7 +24,6 @@ const supabase = createClient(
 )
 
 const PNG_PATH = path.join(os.homedir(), 'Desktop', 'fit_track_richmenu_new.png')
-const COMING_SOON = '功能即將開放，敬請期待 🙏'
 
 async function lineApi(token, url, options = {}) {
   const res = await fetch(url, {
@@ -90,10 +89,10 @@ async function main() {
         bounds: { x: 833, y: 843, width: 833, height: 843 },
         action: { type: 'uri', uri: `${LIFF}/private-lessons?gym=${GYM_ID}` },
       },
-      // ⑤ 場地介紹（右側全高）暫停用
+      // ⑤ 場地介紹（右側全高）
       {
         bounds: { x: 1666, y: 0, width: 834, height: 1686 },
-        action: { type: 'message', text: COMING_SOON },
+        action: { type: 'uri', uri: `${LIFF}/facility?gym=${GYM_ID}` },
       },
     ],
   }
